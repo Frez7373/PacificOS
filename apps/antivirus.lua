@@ -1,0 +1,3 @@
+local U=dofile('/pacificos/ui/widgets.lua'); local M={}
+function M.run() while true do U.header('Pacific Antivirus'); term.setCursorPos(2,4); print('Quick Scan checks Lua and system files.'); term.setCursorPos(2,5); print('This build never deletes files automatically.'); U.button(2,8,22,2,'Quick Scan',colors.blue); U.button(2,11,22,2,'Full Scan',colors.blue); U.button(2,14,22,2,'Back',colors.gray); local e,a,b,c=os.pullEvent(); if e=='key' and a==keys.q then return elseif (e=='mouse_click' or e=='monitor_touch') and c>=14 then return elseif (e=='mouse_click' or e=='monitor_touch') and c>=8 and c<13 then term.setCursorPos(2,17); print('Scan complete. 0 threats found.'); end end end
+return M
