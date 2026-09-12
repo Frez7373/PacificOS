@@ -1,3 +1,31 @@
-local U=dofile('/pacificos/ui/widgets.lua'); local M={}
-function M.run() while true do local w,h=term.getSize(); U.header('System Information'); local lines={'PacificOS 1.0.0','Computer ID: '..os.getComputerID(),'Label: '..tostring(os.getComputerLabel()),'Terminal: '..w..'x'..h,'CraftOS: '..tostring(os.version()),'Free space: '..tostring(fs.getFreeSpace('/'))}; for i,s in ipairs(lines) do term.setCursorPos(2,3+i); print(s) end; U.status('Q or Back'); local e,a,b,c=os.pullEvent(); if e=='key' and a==keys.q then return elseif (e=='mouse_click' or e=='monitor_touch') and c>=h-1 then return end end end
+local U=dofile('/pacificos/ui/widgets.lua')
+local M={}
+
+function M.run()
+ while true do
+  local w,h=term.getSize()
+  U.clear()
+  U.header('System Information')
+  local free='Unknown'
+  pcall(function() free=tostring(fs.getFreeSpace('/')) end)
+  local label=os.getComputerLabel()
+  local lines={
+   'PacificOS 1.4.0',
+   'Made by Complex Computer International (CCI)',
+   'Copyright CCI 2026',
+   'Computer ID: '..tostring(os.getComputerID()),
+   'Computer label: '..tostring(label or 'Not set'),
+   'Terminal: '..w..'x'..h,
+   'CraftOS: '..tostring(os.version()),
+   'Free storage: '..free..' bytes',
+   'Peripherals: '..tostring(#peripheral.getNames())
+  }
+  for i,s in ipairs(lines) do U.label(3,4+i-1,s,i<=3 and U._accent or colors.white) end
+  U.button(3,h-3,20,2,'Back',colors.gray)
+  U.status('Q / Esc = close')
+  local e,a,b,c=os.pullEvent()
+  if e=='key' and (a==keys.q or a==keys.escape or a==keys.backspace) then return
+  elseif (e=='mouse_click' or e=='monitor_touch') and c>=h-3 and c<h-1 and b>=3 and b<23 then return end
+ end
+end
 return M
