@@ -1,4 +1,2 @@
-return {
- bg=colors.black, panel=colors.blue, panel2=colors.lightBlue, text=colors.white, muted=colors.lightGray,
- accent=colors.cyan, good=colors.lime, warn=colors.yellow, bad=colors.red, dark=colors.gray
-}
+local C=colors
+return {bg=C.black,panel=C.gray,panel2=C.lightBlue,card=C.blue,text=C.white,muted=C.lightGray,accent=C.cyan,good=C.lime,warn=C.yellow,bad=C.red,dark=C.black}
