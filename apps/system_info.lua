@@ -9,7 +9,6 @@ function M.run()
   local free='Unknown'
   pcall(function() free=tostring(fs.getFreeSpace('/')) end)
   local label=os.getComputerLabel()
-  local peripherals=peripheral.getNames()
   local lines={
    'PacificOS 1.5.0',
    'Made by Complex Computer International (CCI)',
@@ -19,11 +18,10 @@ function M.run()
    'Terminal: '..w..'x'..h,
    'CraftOS: '..tostring(os.version()),
    'Free storage: '..free..' bytes',
-   'Peripherals: '..tostring(#peripherals)
+   'Peripherals: '..tostring(#peripheral.getNames())
   }
-  for i,s in ipairs(lines) do
-   U.label(3,4+i-1,s,i<=3 and U._accent or U._text)
-  end
+  local maxLines=math.max(1,h-7)
+  for i=1,math.min(#lines,maxLines) do U.label(3,3+i,lines[i],i<=3 and U._accent or U._text) end
   U.button(3,h-3,20,2,'Back',colors.gray)
   U.status('Q / Esc / Backspace = close')
   local e,a,b,c=os.pullEvent()
