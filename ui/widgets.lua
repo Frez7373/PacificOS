@@ -1,10 +1,16 @@
 local T=dofile('/pacificos/ui/theme.lua')
 local W={}
+W._accent=T.accent
+W._muted=T.muted
+W._text=T.text
 
 local function fit(text,w)
  text=tostring(text or '')
  if w<=0 then return '' end
- if #text>w then return string.sub(text,1,w) end
+ if #text>w then
+  if w<=3 then return string.rep('.',w) end
+  return string.sub(text,1,w-3)..'...'
+ end
  return text..string.rep(' ',w-#text)
 end
 
@@ -17,10 +23,11 @@ end
 
 function W.fill(x,y,w,h,bg,fg)
  w=math.max(0,math.floor(w or 0)); h=math.max(0,math.floor(h or 0))
+ if w<=0 or h<=0 then return end
  term.setBackgroundColor(bg or T.bg)
  if fg then term.setTextColor(fg) end
  for i=0,h-1 do
-  term.setCursorPos(x,y+i)
+  term.setCursorPos(math.max(1,x),math.max(1,y+i))
   write(string.rep(' ',w))
  end
 end
@@ -30,10 +37,11 @@ function W.button(x,y,w,h,label,bg,fg)
  w=math.max(1,math.floor(w or 1)); h=math.max(1,math.floor(h or 1))
  W.fill(x,y,w,h,bg or T.card)
  term.setTextColor(fg or T.text)
- local tx=x+math.max(0,math.floor((w-#label)/2))
+ local shown=string.sub(label,1,w)
+ local tx=x+math.max(0,math.floor((w-#shown)/2))
  local ty=y+math.floor((h-1)/2)
- term.setCursorPos(tx,ty)
- write(string.sub(label,1,w))
+ term.setCursorPos(math.max(1,tx),math.max(1,ty))
+ write(shown)
 end
 
 function W.hit(x,y,w,h,tx,ty)
@@ -49,10 +57,7 @@ function W.top(title)
  write(fit(' PACIFICOS  '..title,w))
 end
 
--- Backward-compatible API used by older PacificOS apps.
-function W.header(title)
- W.top(title)
-end
+function W.header(title) W.top(title) end
 
 function W.bottom(text)
  local w,h=term.getSize()
@@ -63,22 +68,21 @@ function W.bottom(text)
  write(fit(text,w))
 end
 
-function W.status(text)
- W.bottom(text)
-end
+function W.status(text) W.bottom(text) end
 
 function W.center(y,text,fg)
  local w=select(1,term.getSize())
  text=tostring(text or '')
  term.setTextColor(fg or T.text)
- term.setCursorPos(math.max(1,math.floor((w-#text)/2)+1),y)
+ term.setCursorPos(math.max(1,math.floor((w-#text)/2)+1),math.max(1,y))
  write(string.sub(text,1,w))
 end
 
 function W.label(x,y,text,fg)
  local w=select(1,term.getSize())
  text=tostring(text or '')
- term.setCursorPos(math.max(1,x),math.max(1,y))
+ x=math.max(1,math.floor(x or 1)); y=math.max(1,math.floor(y or 1))
+ term.setCursorPos(x,y)
  term.setTextColor(fg or T.text)
  write(string.sub(text,1,math.max(0,w-x+1)))
 end
