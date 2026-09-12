@@ -1,56 +1,11 @@
-local BASE = "https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
-local ROOT = "/pacificos"
-local files = {
-  "boot.lua", "bios.lua", "kernel.lua", "startup.lua",
-  "system/module.lua", "system/config.lua", "system/filesystem.lua", "system/devices.lua", "system/network.lua", "system/security.lua", "system/updater.lua",
-  "ui/theme.lua", "ui/widgets.lua", "ui/windows.lua",
-  "apps/settings.lua", "apps/files.lua", "apps/editor.lua", "apps/task_manager.lua", "apps/terminal.lua", "apps/network.lua", "apps/devices.lua", "apps/updater.lua", "apps/antivirus.lua", "apps/calculator.lua", "apps/clock.lua", "apps/calendar.lua", "apps/system_info.lua", "apps/about.lua",
-  "recovery/recovery.lua", "recovery/factory_reset.lua", "manifest.lua"
-}
-local function mkdirs(path)
-  if path == "" or path == "/" then return end
-  local p = ""
-  for part in string.gmatch(path, "[^/]+") do
-    p = p == "" and part or (p .. "/" .. part)
-    if not fs.exists("/" .. p) then fs.makeDir("/" .. p) end
-  end
-end
-local function get(url)
-  local r, e = http.get(url)
-  if not r then return nil, e or "HTTP failed" end
-  local body = r.readAll(); r.close(); return body
-end
-term.clear(); term.setCursorPos(1,1)
-print("PACIFICOS INSTALLER 1.0.0")
-print("")
-if not http then print("HTTP API is disabled."); print("Enable HTTP in CC:Tweaked settings."); return end
+local BASE='https://raw.githubusercontent.com/Frez7373/PacificOS/main/'
+local ROOT='/pacificos'
+local files={'boot.lua','bios.lua','kernel.lua','startup.lua','system/module.lua','system/config.lua','system/filesystem.lua','system/devices.lua','system/network.lua','system/security.lua','system/updater.lua','ui/theme.lua','ui/widgets.lua','ui/windows.lua','apps/settings.lua','apps/files.lua','apps/editor.lua','apps/task_manager.lua','apps/terminal.lua','apps/network.lua','apps/devices.lua','apps/updater.lua','apps/antivirus.lua','apps/calculator2.lua','apps/clock.lua','apps/calendar.lua','apps/system_info.lua','apps/about.lua','recovery/recovery.lua','recovery/factory_reset.lua','manifest.lua'}
+local function mkdirs(path) if path=='' or path=='/' then return end local p='' for part in string.gmatch(path,'[^/]+') do p=p=='' and part or p..'/'..part; if not fs.exists('/'..p) then fs.makeDir('/'..p) end end end
+local function get(url) local r,e=http.get(url); if not r then return nil,e or 'HTTP failed' end local s=r.readAll(); r.close(); return s end
+term.clear(); term.setCursorPos(1,1); print('PACIFICOS INSTALLER 1.0.0'); print('')
+if not http then print('HTTP API is disabled.'); print('Enable HTTP in CC:Tweaked settings.'); return end
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
-for i, path in ipairs(files) do
-  write(string.format("[%02d/%02d] %s", i, #files, path))
-  local body, err = get(BASE .. path)
-  if not body then print(" FAILED: " .. tostring(err)); return end
-  local full = ROOT .. "/" .. path
-  mkdirs(fs.getDir(full))
-  local h = fs.open(full, "w")
-  if not h then print(" FAILED: cannot write"); return end
-  h.write(body); h.close(); print(" OK")
-end
-local startup = [[local ok, err = pcall(dofile, "/pacificos/boot.lua")
-if not ok then
-  term.clear(); term.setCursorPos(1,1)
-  print("PacificOS boot failure")
-  print(tostring(err))
-  print("")
-  print("Press R for recovery or Q to shutdown.")
-  while true do
-    local _,k = os.pullEvent("key")
-    if k == keys.r then dofile("/pacificos/recovery/recovery.lua"); return end
-    if k == keys.q then os.shutdown(); return end
-  end
-end]]
-local h = fs.open("/startup.lua", "w"); h.write(startup); h.close()
-print("")
-print("PacificOS installed successfully.")
-print("Rebooting...")
-os.sleep(1)
-os.reboot()
+for i,path in ipairs(files) do write(string.format('[%02d/%02d] %s',i,#files,path)); local body,err=get(BASE..path); if not body then print(' FAILED: '..tostring(err)); return end; local full=ROOT..'/'..path; mkdirs(fs.getDir(full)); local h=fs.open(full,'w'); if not h then print(' FAILED: cannot write'); return end; h.write(body); h.close(); print(' OK') end
+local startup='local ok,err=pcall(dofile,"/pacificos/boot.lua")\nif not ok then term.clear(); term.setCursorPos(1,1); print("PacificOS boot failure"); print(tostring(err)); print("R = Recovery, Q = Shutdown"); while true do local _,k=os.pullEvent("key"); if k==keys.r then dofile("/pacificos/recovery/recovery.lua"); return elseif k==keys.q then os.shutdown(); return end end end'
+local h=fs.open('/startup.lua','w'); h.write(startup); h.close(); print(''); print('PacificOS installed successfully.'); print('Rebooting...'); os.sleep(1); os.reboot()
