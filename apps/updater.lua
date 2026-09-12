@@ -1,3 +1,15 @@
 local U=dofile('/pacificos/ui/widgets.lua'); local Up=dofile('/pacificos/system/updater.lua'); local M={}
-function M.run() while true do U.header('Updater'); local v,e=Up.version(); term.setCursorPos(2,4); print('Remote version: '..tostring(v or e)); term.setCursorPos(2,6); print('Current version: 1.0.0'); U.button(2,9,24,2,'Check again',colors.blue); U.button(2,12,24,2,'Back',colors.gray); local ev,a,b,c=os.pullEvent(); if (ev=='mouse_click' or ev=='monitor_touch') and c>=12 and c<14 then return elseif (ev=='mouse_click' or ev=='monitor_touch') and c>=9 and c<11 then end; if ev=='key' and a==keys.q then return end end end
+function M.run()
+ while true do
+  U.header('Updater')
+  local v,e=Up.version()
+  term.setCursorPos(2,4); print('Remote version: '..tostring(v or e))
+  term.setCursorPos(2,6); print('Installed version: 1.2.0')
+  U.button(2,9,24,2,'Check again',colors.blue)
+  U.button(2,12,24,2,'Back',colors.gray)
+  local ev,a,_,c=os.pullEvent()
+  if (ev=='mouse_click' or ev=='monitor_touch') and c>=12 and c<14 then return end
+  if ev=='key' and a==keys.q then return end
+ end
+end
 return M
