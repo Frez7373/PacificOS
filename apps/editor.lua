@@ -1,0 +1,3 @@
+local U=dofile('/pacificos/ui/widgets.lua'); local M={}
+function M.run() U.header('Text Editor'); term.setCursorPos(2,4); write('File path: '); local p=read(); if p=='' then return end; local text=''; if fs.exists(p) and not fs.isDir(p) then local h=fs.open(p,'r'); text=h.readAll() or ''; h.close() end; term.clear(); term.setCursorPos(1,1); print('PacificOS Editor: '..p); print('Existing content will be replaced when saved.'); term.setCursorPos(1,3); print(text); print(''); print('Enter one line at a time. Type .SAVE to save, .CANCEL to cancel.'); local lines={}; while true do local s=read(); if s=='.SAVE' then local h=fs.open(p,'w'); h.write(table.concat(lines,'\n')); h.close(); return elseif s=='.CANCEL' then return else lines[#lines+1]=s end end end
+return M
