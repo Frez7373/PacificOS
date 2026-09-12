@@ -1,0 +1,3 @@
+local U=dofile('/pacificos/ui/widgets.lua'); local N=dofile('/pacificos/system/network.lua'); local M={}
+function M.run() while true do U.header('Network Manager'); local s=N.status(); term.setCursorPos(2,3); print('Enabled: '..tostring(s.enabled)); term.setCursorPos(2,4); print('Modems: '..#s.modems); for i,m in ipairs(s.modems) do term.setCursorPos(2,5+i); print(m) end; U.status('B broadcast test   Q close'); local e,a=os.pullEvent(); if e=='key' and a==keys.q then return elseif e=='key' and a==keys.b then local ok=N.broadcast({type='ping'},'pacific'); term.setCursorPos(2,10); print('Broadcast: '..tostring(ok)) end end end
+return M
