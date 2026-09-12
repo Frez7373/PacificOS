@@ -3,8 +3,9 @@ local T=dofile(ROOT..'/ui/theme.lua')
 local w,h=term.getSize()
 term.setBackgroundColor(colors.black); term.setTextColor(colors.white); term.clear()
 local function center(y,s,c) term.setTextColor(c or colors.white); term.setCursorPos(math.max(1,math.floor((w-#s)/2)+1),y); write(s) end
-center(math.max(2,math.floor(h/2)-4),'PACIFICOS',T.accent)
-center(math.max(3,math.floor(h/2)-2),'PacificOS 1.3.0',T.muted)
+center(math.max(2,math.floor(h/2)-5),'PACIFICOS',T.accent)
+center(math.max(3,math.floor(h/2)-3),'PacificOS 1.4.0',T.muted)
+center(math.max(4,math.floor(h/2)-1),'Complex Computer International (CCI) • 2026',T.text)
 local steps={'Hardware','System files','Kernel','Services','Applications','Graphical interface'}
 for i,s in ipairs(steps) do local y=math.min(h-3,math.floor(h/2)+i-2); term.setCursorPos(3,y); term.setTextColor(T.muted); write(s..string.rep('.',math.max(1,20-#s))); term.setTextColor(T.good); write(' OK'); os.sleep(0.12) end
 if not fs.exists(ROOT..'/kernel.lua') then error('System kernel is missing') end
