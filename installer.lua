@@ -3,7 +3,7 @@ local BASE = "https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT = "/pacificos"
 local STAGE = ROOT .. "/.installer_stage"
 local BACKUP = ROOT .. "/.installer_backup"
-local VERSION = "1.8.1"
+local VERSION = "1.9.0"
 
 local files = {
   "startup.lua","boot.lua","bios.lua","kernel.lua","manifest.lua",
@@ -76,6 +76,18 @@ local function write(path, body)
   return true
 end
 
+local function validateStagedLua()
+  for _, path in ipairs(files) do
+    if path:lower():match("%.lua$") then
+      local fn, err = loadfile(stagePath(path))
+      if not fn then
+        return false, path .. ": " .. tostring(err)
+      end
+    end
+  end
+  return true
+end
+
 local function rollback(applied)
   for i = #applied, 1, -1 do
     local path = applied[i]
@@ -142,6 +154,15 @@ for i, path in ipairs(files) do
 end
 
 print("")
+print("Validating staged Lua files...")
+local valid, validationErr = validateStagedLua()
+if not valid then
+  print("VALIDATION FAILED: " .. tostring(validationErr))
+  clearPath(STAGE)
+  clearPath(BACKUP)
+  return
+end
+
 print("Creating rollback backup...")
 
 for _, path in ipairs(files) do
