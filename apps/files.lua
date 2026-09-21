@@ -213,7 +213,7 @@ local function toolbar(w, h)
     end
   end
 
-  return result, startY
+  return result, startY, rows
 end
 
 function M.run()
@@ -227,7 +227,7 @@ function M.run()
     local list = fs.list(path)
     table.sort(list, function(a,b) return a:lower() < b:lower() end)
 
-    local buttons, toolbarY = toolbar(w, h)
+    local buttons, toolbarY, toolbarRows = toolbar(w, h)
     local rows = math.max(1, toolbarY - 4)
     local maxScroll = math.max(1, #list - rows + 1)
 
@@ -259,7 +259,8 @@ function M.run()
       end
     end
 
-    U.label(2, math.max(4, toolbarY - 1), notice, U._muted, math.max(1, w - 3))
+    local noticeY = math.min(math.max(4, toolbarY + toolbarRows * 2), math.max(4, h - 3))
+    U.label(2, noticeY, notice, U._muted, math.max(1, w - 3))
     U.status("Up/Down select | Enter open | N new | F folder | R rename | Del delete | C copy | M move | Backspace up")
 
     local e, a, b, c = os.pullEvent()
