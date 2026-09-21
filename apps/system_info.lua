@@ -1,32 +1,60 @@
-local U=dofile('/pacificos/ui/widgets.lua')
-local M={}
+local U = dofile("/pacificos/ui/widgets.lua")
+local M = {}
+
+local function safeCall(fn, fallback)
+  local ok, value = pcall(fn)
+  return ok and value ~= nil and value or fallback
+end
+
+local function formatBytes(value)
+  if value == "unlimited" then return "unlimited" end
+  value = tonumber(value)
+  if not value then return "unknown" end
+  local units = {"B", "KB", "MB", "GB"}
+  local index = 1
+  while value >= 1024 and index < #units do
+    value = value / 1024
+    index = index + 1
+  end
+  return string.format("%.1f %s", value, units[index])
+end
 
 function M.run()
- while true do
-  local w,h=term.getSize()
-  U.clear()
-  U.header('System Information')
-  local free='Unknown'
-  pcall(function() free=tostring(fs.getFreeSpace('/')) end)
-  local label=os.getComputerLabel()
-  local lines={
-   'PacificOS 1.7.4',
-   'Made by Complex Computer International (CCI)',
-   'Copyright CCI 2026',
-   'Computer ID: '..tostring(os.getComputerID()),
-   'Computer label: '..tostring(label or 'Not set'),
-   'Terminal: '..w..'x'..h,
-   'CraftOS: '..tostring(os.version()),
-   'Free storage: '..free..' bytes',
-   'Peripherals: '..tostring(#peripheral.getNames())
-  }
-  local maxLines=math.max(1,h-7)
-  for i=1,math.min(#lines,maxLines) do U.label(3,3+i,lines[i],i<=3 and U._accent or U._text) end
-  U.button(3,h-3,20,2,'Back',colors.gray)
-  U.status('Q / Esc / Backspace = close')
-  local e,a,b,c=os.pullEvent()
-  if e=='key' and (a==keys.q or a==keys.escape or a==keys.backspace) then return
-  elseif (e=='mouse_click' or e=='monitor_touch') and c>=h-3 and c<h-1 and b>=3 and b<23 then return end
- end
+  while true do
+    local w, h = term.getSize()
+    local label = safeCall(os.getComputerLabel, "Not set")
+    local craftos = safeCall(os.version, "Unknown")
+    local free = safeCall(function() return fs.getFreeSpace("/") end, "unknown")
+    local capacity = safeCall(function() return fs.getCapacity("/") end, "unknown")
+    local devices = peripheral.getNames()
+
+    U.clear()
+    U.header("System Information", true)
+    U.label(2, 4, "PacificOS 1.8.0", U._accent)
+    U.label(2, 5, "Complex Computer International (CCI) 2026", U._text)
+    U.label(2, 7, "Computer ID: " .. tostring(os.getComputerID()))
+    U.label(2, 8, "Computer label: " .. tostring(label))
+    U.label(2, 9, "Terminal: " .. tostring(w) .. " x " .. tostring(h))
+    U.label(2, 10, "CraftOS: " .. tostring(craftos))
+    U.label(2, 11, "Storage free: " .. formatBytes(free))
+    U.label(2, 12, "Storage capacity: " .. formatBytes(capacity))
+    U.label(2, 13, "Peripherals: " .. tostring(#devices))
+
+    local y = 15
+    for i = 1, math.min(#devices, h - 18) do
+      U.label(4, y, tostring(devices[i]) .. " [" .. tostring(peripheral.getType(devices[i])) .. "]", U._muted)
+      y = y + 1
+    end
+
+    U.backButton(h - 2)
+    U.status("Q / Esc / Backspace = close")
+
+    local e, a, b, c = os.pullEvent()
+    if U.closeEvent(e, a) then return end
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
+      return
+    end
+  end
 end
+
 return M
