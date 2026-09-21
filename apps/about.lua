@@ -7,24 +7,24 @@ function M.run()
     U.clear()
     U.header("About PacificOS", true)
 
-    U.center(4, "PACIFICOS 1.8.1", U._accent)
-    U.center(6, "Classic interface for CC:Tweaked.", U._text)
-    U.center(8, "Complex Computer International (CCI)", U._accent)
-    U.center(9, "2026", U._muted)
+    U.center(4, "PACIFICOS 1.9.0", U._accent)
+    U.center(5, "Windows Classic inspired interface.", U._text)
+    U.center(7, "Complex Computer International (CCI)", U._accent)
+    U.center(8, "2026", U._muted)
 
-    U.label(3, 11, "System components", U._accent)
-    U.label(5, 12, "Desktop, BIOS, Recovery, Updater")
-    U.label(5, 13, "Files, Editor, Calculator, Network")
-    U.label(5, 14, "Devices, Monitor, Antivirus, App Installer")
+    U.label(2, math.min(10, h - 3), "System components", U._accent)
+    if h >= 13 then
+      U.label(3, 11, "Desktop / BIOS / Recovery / Updater", U._text)
+      U.label(3, 12, "Files / Editor / Calculator / Network", U._text)
+    elseif h >= 10 then
+      U.label(3, 11, "Desktop / BIOS / Recovery / Apps", U._text)
+    end
 
-    U.label(3, math.min(16, h - 4), "Windows 98-inspired visual theme.", U._muted)
     U.backButton(h - 2)
     U.status("Q / Esc / Backspace = close")
-
     local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) then return end
-    if (e == "mouse_click" or e == "monitor_touch")
-      and U.backHit(b, c, h - 2, 18) then
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
       return
     end
   end
