@@ -1,3 +1,4 @@
+-- PACIFICOS_WIDGET_COMPAT_161
 local T=dofile("/pacificos/ui/theme.lua")
 local W={}
 W._accent=T.accent
@@ -10,7 +11,7 @@ local function fit(text,w)
   if w<=0 then return "" end
   if #text>w then
     if w<=3 then return string.rep(".",w) end
-    return string.sub(text,1,w-3).."..."
+    return text:sub(1,w-3).."..."
   end
   return text..string.rep(" ",w-#text)
 end
@@ -37,16 +38,18 @@ function W.fill(x,y,w,h,bg,fg)
 end
 
 function W.button(x,y,w,h,label,bg,fg)
-  -- Compatibility with an older PacificOS call:
-  -- W.button(x,y,width,"TEXT",color)
-  if type(h)=="string" and type(label)=="number" then
-    fg=nil
-    bg=label
-    label=h
+  -- Accept both the current signature:
+  -- button(x,y,w,h,label,bg,fg)
+  -- and the old PacificOS signature:
+  -- button(x,y,w,label,bg)
+  if type(h)~="number" then
+    local oldLabel=h
+    local oldBg=label
+    local oldFg=bg
     h=1
-  elseif type(h)=="string" and label==nil then
-    label=h
-    h=1
+    label=oldLabel
+    bg=oldBg
+    fg=oldFg
   end
 
   x=math.max(1,math.floor(tonumber(x) or 1))

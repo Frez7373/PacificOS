@@ -1,6 +1,8 @@
+-- PacificOS 1.6.1 installer
 local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT="/pacificos"
-local VERSION="1.6.0"
+local VERSION="1.6.1"
+local CACHE="20260921-161"
 local files={
   "boot.lua","bios.lua","kernel.lua","manifest.lua",
   "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
@@ -19,8 +21,9 @@ local function mkdirs(path)
   end
 end
 
-local function get(url)
-  if not http then return nil,"HTTP API is disabled. Enable HTTP in CC:Tweaked settings." end
+local function get(path)
+  if not http then return nil,"HTTP API is disabled." end
+  local url=BASE..path.."?pacificos="..CACHE
   local r,e=http.get(url)
   if not r then return nil,e or "HTTP request failed." end
   local code=r.getResponseCode and r.getResponseCode() or 200
@@ -30,41 +33,61 @@ local function get(url)
   return body
 end
 
-term.setBackgroundColor(colors.black); term.setTextColor(colors.white); term.clear(); term.setCursorPos(1,1)
+local function writeFile(path,body)
+  local full=ROOT.."/"..path
+  if path=="startup.lua" then full="/startup.lua" end
+  mkdirs(full)
+  local h=fs.open(full,"w")
+  if not h then return false,"Cannot write "..full end
+  h.write(body)
+  h.close()
+  return true
+end
+
+term.setBackgroundColor(colors.black)
+term.setTextColor(colors.white)
+term.clear()
+term.setCursorPos(1,1)
+
 print("PACIFICOS "..VERSION.." INSTALLER")
 print("Complex Computer International (CCI) - 2026")
+print("Fresh download mode: "..CACHE)
 print("")
 
 if not http then
   print("HTTP API is disabled.")
-  print("Enable HTTP in CC:Tweaked settings and run the installer again.")
   return
 end
 
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 
+local downloaded={}
 for i,path in ipairs(files) do
   write(string.format("[%02d/%02d] %-34s ",i,#files,path))
-  local body,e=get(BASE..path)
-  if not body then
+  local body,e=get(path)
+  if not body then print("FAILED"); print(tostring(e)); return end
+
+  -- Verify the critical UI file before writing it.
+  if path=="ui/widgets.lua" and not body:find("PACIFICOS_WIDGET_COMPAT_161",1,true) then
     print("FAILED")
-    print(tostring(e))
+    print("The server returned an old widgets.lua.")
+    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
     return
   end
-  local full=ROOT.."/"..path
-  mkdirs(full)
-  local h=fs.open(full,"w")
-  if not h then print("FAILED: cannot write "..full); return end
-  h.write(body); h.close()
+
+  local ok,werr=writeFile(path,body)
+  if not ok then print("FAILED"); print(tostring(werr)); return end
+  downloaded[path]=true
   print("OK")
 end
 
-local h=fs.open("/startup.lua","w")
-if not h then print("FAILED: cannot write /startup.lua"); return end
-h.write('local ok,err=pcall(dofile,"/pacificos/boot.lua")\nif not ok then term.clear();term.setCursorPos(1,1);print("PacificOS startup error");print(tostring(err));print("");print("R = Recovery   Q = Shutdown");while true do local e,k=os.pullEvent("key");if k==keys.r then dofile("/pacificos/recovery/recovery.lua");return elseif k==keys.q then os.shutdown();return end end end\n')
-h.close()
+local startup='local ok,err=pcall(dofile,"/pacificos/boot.lua")\nif not ok then term.clear();term.setCursorPos(1,1);print("PACIFICOS RECOVERY");print("");print("Startup failed:");print(tostring(err));print("");print("[R] Recovery   [Q] Shutdown");while true do local e,k=os.pullEvent();if e=="key" and k==keys.r then dofile("/pacificos/recovery/recovery.lua");return elseif e=="key" and k==keys.q then os.shutdown();return end end end\n'
+local ok,err=writeFile("startup.lua",startup)
+if not ok then print("FAILED: "..tostring(err)); return end
 
 print("")
+print("All "..#files.." PacificOS files downloaded.")
+print("Critical UI compatibility check: PASSED")
 print("PacificOS "..VERSION.." installed successfully.")
 print("Rebooting...")
 os.sleep(1)
