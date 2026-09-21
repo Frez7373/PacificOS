@@ -10,9 +10,9 @@ end
 local function factorial(n)
   n = math.floor(tonumber(n) or -1)
   if n < 0 or n > 170 then return nil end
-  local r = 1
-  for i = 2, n do r = r * i end
-  return r
+  local result = 1
+  for i = 2, n do result = result * i end
+  return result
 end
 
 local function gcd(a, b)
@@ -56,38 +56,35 @@ local env = {
 }
 
 local allowed = {}
-for key, _ in pairs(env) do
-  allowed[key] = true
-end
+for key, _ in pairs(env) do allowed[key] = true end
 
 local function evaluate(input, answer)
-  local s = tostring(input or "")
-  s = s:gsub("%s+", ""):gsub("×", "*"):gsub("÷", "/")
-  s = s:gsub("ANS", "ans")
+  local expression = tostring(input or ""):gsub("%s+", ""):gsub("×", "*"):gsub("÷", "/")
+  expression = expression:gsub("ANS", "ans")
 
-  if s == "" then return nil, "Expression is empty." end
-  if s:find("[^%d%+%-%*/%%%^%(%)%.,%a_]") then
+  if expression == "" then return nil, "Enter an expression." end
+  if expression:find("[^%d%+%-%*/%%%^%(%)%.,%a_]") then
     return nil, "Unsupported character."
   end
 
-  for name in s:gmatch("([%a_][%w_]*)%s*%(") do
+  for name in expression:gmatch("([%a_][%w_]*)%s*%(") do
     if name ~= "ans" and not allowed[name] then
       return nil, "Unknown function: " .. name
     end
   end
 
-  s = s:gsub("([%a_][%w_]*)", function(name)
-    if name == "ans" then return "ans" end
-    if allowed[name] then return name end
+  expression = expression:gsub("([%a_][%w_]*)", function(name)
+    if name == "ans" or allowed[name] then return name end
     return "BAD"
   end)
-  if s:find("BAD", 1, true) then return nil, "Unknown name." end
+
+  if expression:find("BAD", 1, true) then return nil, "Unknown name." end
 
   local scope = {}
   for k, v in pairs(env) do scope[k] = v end
   scope.ans = tonumber(answer) or 0
 
-  local fn, err = load("return " .. s, "calculator", "t", scope)
+  local fn, err = load("return " .. expression, "calculator", "t", scope)
   if not fn then return nil, "Invalid expression: " .. tostring(err) end
 
   local ok, value = pcall(fn)
@@ -99,75 +96,105 @@ local function evaluate(input, answer)
   return value
 end
 
-local function buttonList()
-  return {
-    {"7", "7"}, {"8", "8"}, {"9", "9"}, {"/", "/"},
-    {"4", "4"}, {"5", "5"}, {"6", "6"}, {"*", "*"},
-    {"1", "1"}, {"2", "2"}, {"3", "3"}, {"-", "-"},
-    {"0", "0"}, {".", "."}, {"(", "("}, {"+", "+"},
-    {"pi", "pi"}, {"e", "e"}, {")", ")"}, {"^", "^"},
-    {"sqrt", "sqrt("}, {"sin", "sin("}, {"cos", "cos("}, {"tan", "tan("},
-    {"log", "log("}, {"ln", "ln("}, {"fact", "fact("}, {"Clear", "CLEAR"}
-  }
-end
+local basic = {
+  {"7","7"},{"8","8"},{"9","9"},{"DEL","DEL"},
+  {"4","4"},{"5","5"},{"6","6"},{"÷","/"},
+  {"1","1"},{"2","2"},{"3","3"},{"×","*"},
+  {"0","0"},{".","."},{"-","-"},{"+","+"},
+  {"(","("},{")",")"},{"^","^"},{"=","="},
+  {"pi","pi"},{"e","e"},{"ANS","ans"},{"CLEAR","CLEAR"}
+}
 
-local function pressButton(action, state)
+local scientific = {
+  {"sqrt","sqrt("},{"sin","sin("},{"cos","cos("},{"tan","tan("},
+  {"asin","asin("},{"acos","acos("},{"atan","atan("},{"log","log("},
+  {"ln","ln("},{"log10","log10("},{"exp","exp("},{"pow","pow("},
+  {"fact","fact("},{"gcd","gcd("},{"lcm","lcm("},{"clamp","clamp("},
+  {"abs","abs("},{"round","round("},{"floor","floor("},{"ceil","ceil("},
+  {"max","max("},{"min","min("},{"deg","deg("},{"rad","rad("}
+}
+
+local function press(item, state)
+  local action = item[2]
   if action == "CLEAR" then
     state.expr = ""
-    return
+    state.error = nil
+  elseif action == "DEL" then
+    state.expr = state.expr:sub(1, -2)
+    state.error = nil
+  elseif action == "=" then
+    local value, err = evaluate(state.expr, state.result)
+    if value ~= nil then
+      state.result = value
+      state.history[#state.history + 1] = state.expr .. " = " .. tostring(value)
+      state.error = nil
+    else
+      state.error = err
+    end
+  else
+    state.expr = state.expr .. action
+    state.error = nil
   end
-  state.expr = state.expr .. action
 end
 
 function M.run()
-  local state = {expr = "", result = nil, error = nil, history = {}}
-  local buttons = buttonList()
+  local state = {expr = "", result = nil, error = nil, history = {}, mode = "Basic"}
 
   while true do
     local w, h = term.getSize()
+    local items = state.mode == "Basic" and basic or scientific
+
     U.clear()
     U.header("Calculator", true)
 
-    U.label(2, 4, "Expression", U._muted)
-    U.fill(2, 5, math.max(1, w - 3), 1, U._accent, U._textOnBlue)
-    U.label(3, 5, state.expr ~= "" and state.expr or "0", U._textOnBlue)
+    U.button(2, 3, 12, 1, state.mode == "Basic" and "BASIC" or "SCIENTIFIC", U._accent)
+    U.label(16, 3, "ANS = last result", U._muted)
+
+    U.label(2, 5, "Expression", U._muted)
+    U.fill(2, 6, math.max(1, w - 3), 1, U._accent, U._textOnBlue)
+    U.label(3, 6, state.expr == "" and "0" or state.expr, U._textOnBlue)
 
     if state.result ~= nil then
-      U.label(2, 6, "=", U._muted)
-      U.label(4, 6, tostring(state.result), U._accent)
+      U.label(2, 7, "Result:", U._muted)
+      U.label(10, 7, tostring(state.result), U._accent)
     elseif state.error then
-      U.label(4, 6, state.error, U._bad)
+      U.label(2, 7, state.error, U._bad, math.max(1, w - 3))
     end
 
-    local cols = w >= 46 and 4 or 3
+    local cols = 4
     local gap = 1
     local bw = math.max(7, math.floor((w - 2 - (cols - 1) * gap) / cols))
-    local startY = 8
-    local buttonHeight = 1
+    local startY = 9
 
-    for i, item in ipairs(buttons) do
+    for i, item in ipairs(items) do
       local col = (i - 1) % cols
       local row = math.floor((i - 1) / cols)
       local x = 2 + col * (bw + gap)
       local y = startY + row * 2
       if y < h - 4 then
-        local bg = item[2] == "CLEAR" and U._bad or U._accent2
-        if item[2] == "CLEAR" then bg = colors.red end
-        U.button(x, y, bw, buttonHeight, item[1], bg)
+        local bg = item[2] == "CLEAR" and colors.red or (item[2] == "=" and U._accent or U._accent2)
+        local fg = item[2] == "CLEAR" or item[2] == "=" and colors.white or U._text
+        U.button(x, y, bw, 1, item[1], bg, fg)
       end
     end
 
-    local historyY = h - 4
-    U.label(2, historyY, "History", U._muted)
-    local visible = 0
+    local switchY = h - 3
+    U.button(2, switchY, 14, 1, state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
+    U.button(17, switchY, math.min(20, w - 18), 1, "BACK", U._accent2)
+
+    local historyY = h - 6
+    U.label(math.max(1, w - 28), historyY, "Recent", U._muted, math.min(26, w - 2))
+    local hy = historyY + 1
+    local shown = 0
     for i = #state.history, 1, -1 do
-      if historyY + 1 + visible >= h then break end
-      U.label(3, historyY + 1 + visible, state.history[i], U._muted)
-      visible = visible + 1
-      if visible >= 3 then break end
+      if hy >= h - 3 then break end
+      U.label(math.max(1, w - 28), hy, state.history[i], U._muted, math.min(26, w - 2))
+      hy = hy + 1
+      shown = shown + 1
+      if shown >= 3 then break end
     end
 
-    U.status("Keyboard works too | Enter = calculate | Backspace = edit | Q/Esc = back")
+    U.status("Keyboard: numbers/operators | Enter = result | Q/Esc = back")
 
     local e, a, b, c = os.pullEvent()
     if e == "key" then
@@ -176,37 +203,29 @@ function M.run()
         state.expr = state.expr:sub(1, -2)
         state.error = nil
       elseif a == keys.enter then
-        local value, err = evaluate(state.expr, state.result)
-        if value ~= nil then
-          state.result = value
-          state.error = nil
-          state.history[#state.history + 1] = state.expr .. " = " .. tostring(value)
-        else
-          state.error = err
-        end
+        press({"=","="}, state)
       end
     elseif e == "char" then
+      if a == "," then a = "." end
       state.expr = state.expr .. a
       state.error = nil
     elseif e == "mouse_click" or e == "monitor_touch" then
-      for i, item in ipairs(buttons) do
-        local col = (i - 1) % cols
-        local row = math.floor((i - 1) / cols)
-        local x = 2 + col * (bw + gap)
-        local y = startY + row * 2
-        if y < h - 4 and U.hit(x, y, bw, buttonHeight, b, c) then
-          if item[2] == "CLEAR" then
-            pressButton("CLEAR", state)
-          else
-            pressButton(item[2], state)
+      if U.hit(2, 3, 12, 1, b, c) or U.hit(2, switchY, 14, 1, b, c) then
+        state.mode = state.mode == "Basic" and "Scientific" or "Basic"
+      elseif U.hit(17, switchY, math.max(1, math.min(20, w - 18)), 1, b, c) then
+        return
+      else
+        for i, item in ipairs(items) do
+          local col = (i - 1) % cols
+          local row = math.floor((i - 1) / cols)
+          local x = 2 + col * (bw + gap)
+          local y = startY + row * 2
+          if y < h - 4 and U.hit(x, y, bw, 1, b, c) then
+            press(item, state)
+            break
           end
-          state.error = nil
-          break
         end
       end
-
-      local calcY = 8 + math.ceil(#buttons / cols) * 2
-      if c == h - 3 and U.backHit(b, c, h - 3, math.min(18, w - 2)) then return end
     end
   end
 end
