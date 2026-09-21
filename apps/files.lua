@@ -66,12 +66,16 @@ local function makeName(name)
   return name
 end
 
-local function destination(base, value, item)
+local function destination(value, item)
   value = tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if value == "" then return nil end
   local target = fs.combine("/", value)
   if fs.isDir(target) then target = fs.combine(target, item) end
   return target
+end
+
+local function canCreate(target)
+  return not Security.isProtected(target)
 end
 
 local function doAction(action, path, list, selected)
@@ -82,64 +86,85 @@ local function doAction(action, path, list, selected)
     local name = makeName(prompt("New file name:"))
     if not name then return "Invalid name." end
     local target = fs.combine(path, name)
+    if not canCreate(target) then return "Protected system path." end
     if fs.exists(target) then return "File already exists." end
+
     local h = fs.open(target, "w")
     if not h then return "Cannot create file." end
     h.close()
     return "File created."
+
   elseif action == "New folder" then
     local name = makeName(prompt("New folder name:"))
     if not name then return "Invalid name." end
     local target = fs.combine(path, name)
+    if not canCreate(target) then return "Protected system path." end
     if fs.exists(target) then return "Folder already exists." end
+
     local ok, err = pcall(fs.makeDir, target)
     return ok and "Folder created." or tostring(err)
+
   elseif action == "Rename" and full then
     if Security.isProtected(full) then return "Protected system path." end
     local name = makeName(prompt("Rename to:"))
     if not name then return "Invalid name." end
+
     local target = fs.combine(path, name)
     if Security.isProtected(target) then return "Protected system path." end
     if fs.exists(target) then return "Target already exists." end
+
     local ok, err = pcall(fs.move, full, target)
     return ok and "Renamed." or tostring(err)
+
   elseif action == "Delete" and full then
     if Security.isProtected(full) then return "Protected system path." end
-    if prompt("Type YES to delete " .. item .. ":") == "YES" then
-      local ok, err = FS.safeDelete(full)
-      return ok and "Deleted." or tostring(err)
-    end
-    return "Delete cancelled."
+    if prompt("Type YES to delete " .. item .. ":") ~= "YES" then return "Delete cancelled." end
+
+    local ok, err = FS.safeDelete(full)
+    return ok and "Deleted." or tostring(err)
+
   elseif action == "Copy" and full then
     if Security.isProtected(full) then return "Protected system path." end
-    local target = destination(path, prompt("Copy to path:"), item)
+
+    local target = destination(prompt("Copy to path:"), item)
     if not target then return "Copy cancelled." end
     if Security.isProtected(target) then return "Protected destination." end
     if fs.exists(target) then return "Target already exists." end
+
     local ok, err = pcall(fs.copy, full, target)
     return ok and "Copied." or tostring(err)
+
   elseif action == "Move" and full then
     if Security.isProtected(full) then return "Protected system path." end
-    local target = destination(path, prompt("Move to path:"), item)
+
+    local target = destination(prompt("Move to path:"), item)
     if not target then return "Move cancelled." end
     if Security.isProtected(target) then return "Protected destination." end
     if fs.exists(target) then return "Target already exists." end
+
     local ok, err = pcall(fs.move, full, target)
     return ok and "Moved." or tostring(err)
+
   elseif action == "Up" then
     return "up"
+
   elseif action == "Back" then
     return "back"
+
   elseif action == "Edit" and full then
     local ok, err = editFile(full)
     return ok and "Editor closed." or tostring(err)
+
   elseif action == "Open" and full then
     if fs.isDir(full) then return "open-dir" end
+
     local ext = full:match("%.([%w]+)$")
-    if ext and ({lua=true,txt=true,cfg=true,log=true,md=true})[ext:lower()] then
+    local editable = {lua=true, txt=true, cfg=true, log=true, md=true}
+    if ext and editable[ext:lower()] then
       local ok, err = editFile(full)
       return ok and "Editor closed." or tostring(err)
     end
+
     local ok, err = previewFile(full)
     return ok and "Preview closed." or tostring(err)
   end
@@ -148,7 +173,7 @@ local function doAction(action, path, list, selected)
 end
 
 local function toolbar(w, h)
-  local labels = {"Open", "Edit", "New file", "New folder", "Rename", "Delete", "Copy", "Move", "Up", "Back"}
+  local labels = {"Open","Edit","New file","New folder","Rename","Delete","Copy","Move","Up","Back"}
   local cols = w >= 60 and 5 or (w >= 38 and 3 or 2)
   local rows = math.ceil(#labels / cols)
   local gap = 1
@@ -165,9 +190,10 @@ local function toolbar(w, h)
       local buttonW = math.min(bw, w - x + 1)
       local bg = label == "Delete" and colors.red or (label == "Back" and U._accent2 or U._accent)
       U.button(x, y, buttonW, 1, label, bg)
-      result[#result + 1] = {x=x, y=y, w=buttonW, h=1, action=label}
+      result[#result + 1] = {x=x,y=y,w=buttonW,h=1,action=label}
     end
   end
+
   return result, startY
 end
 
@@ -185,8 +211,10 @@ function M.run()
     local buttons, toolbarY = toolbar(w, h)
     local rows = math.max(1, toolbarY - 5)
     local maxScroll = math.max(1, #list - rows + 1)
-    scroll = math.max(1, math.min(scroll, maxScroll))
+
     if selected > #list then selected = math.max(1, #list) end
+    if #list == 0 then selected = 1 end
+
     if selected < scroll then scroll = selected end
     if selected > scroll + rows - 1 then scroll = selected - rows + 1 end
     scroll = math.max(1, math.min(scroll, maxScroll))
@@ -211,24 +239,39 @@ function M.run()
     end
 
     U.label(2, math.max(4, toolbarY - 1), notice, U._muted, math.max(1, w - 3))
-    U.status("Up/Down = select | Enter/Open | N new | R rename | Del delete | Backspace up")
+    U.status("Up/Down select | Enter/Open | N new | R rename | Del delete | Backspace up")
 
     local e, a, b, c = os.pullEvent()
+
     if e == "key" then
       if U.closeEvent(e, a) then return end
-      if a == keys.up then selected = math.max(1, selected - 1)
-      elseif a == keys.down then selected = math.min(math.max(1, #list), selected + 1)
-      elseif a == keys.backspace then path = parent(path); selected, scroll = 1, 1
+      if a == keys.up then
+        selected = math.max(1, selected - 1)
+      elseif a == keys.down then
+        selected = math.min(math.max(1, #list), selected + 1)
+      elseif a == keys.backspace then
+        path = parent(path)
+        selected, scroll = 1, 1
       elseif a == keys.enter and list[selected] then
         local action = doAction("Open", path, list, selected)
-        if action == "open-dir" then path = fs.combine(path, list[selected]); selected, scroll = 1, 1
-        else notice = action end
-      elseif a == keys.n then notice = doAction("New file", path, list, selected)
-      elseif a == keys.f then notice = doAction("New folder", path, list, selected)
-      elseif a == keys.r then notice = doAction("Rename", path, list, selected)
-      elseif a == keys.delete and list[selected] then notice = doAction("Delete", path, list, selected)
-      elseif a == keys.c and list[selected] then notice = doAction("Copy", path, list, selected)
-      elseif a == keys.m and list[selected] then notice = doAction("Move", path, list, selected)
+        if action == "open-dir" then
+          path = fs.combine(path, list[selected])
+          selected, scroll = 1, 1
+        else
+          notice = action
+        end
+      elseif a == keys.n then
+        notice = doAction("New file", path, list, selected)
+      elseif a == keys.f then
+        notice = doAction("New folder", path, list, selected)
+      elseif a == keys.r then
+        notice = doAction("Rename", path, list, selected)
+      elseif a == keys.delete and list[selected] then
+        notice = doAction("Delete", path, list, selected)
+      elseif a == keys.c and list[selected] then
+        notice = doAction("Copy", path, list, selected)
+      elseif a == keys.m and list[selected] then
+        notice = doAction("Move", path, list, selected)
       end
 
     elseif e == "mouse_click" or e == "monitor_touch" then
@@ -238,26 +281,32 @@ function M.run()
         if index <= #list then
           selected = index
           local action = doAction("Open", path, list, selected)
-          if action == "open-dir" then path = fs.combine(path, list[selected]); selected, scroll = 1, 1
-          else notice = action end
+          if action == "open-dir" then
+            path = fs.combine(path, list[selected])
+            selected, scroll = 1, 1
+          else
+            notice = action
+          end
         end
       else
         for _, r in ipairs(buttons) do
           if U.hit(r.x, r.y, r.w, r.h, b, c) then
             local action = doAction(r.action, path, list, selected)
-            if action == "up" then path = parent(path); selected, scroll = 1, 1
-            elseif action == "back" then return
-            elseif action == "open-dir" then path = fs.combine(path, list[selected]); selected, scroll = 1, 1
-            else notice = action end
+            if action == "up" then
+              path = parent(path)
+              selected, scroll = 1, 1
+            elseif action == "back" then
+              return
+            elseif action == "open-dir" and list[selected] then
+              path = fs.combine(path, list[selected])
+              selected, scroll = 1, 1
+            else
+              notice = action
+            end
             break
           end
         end
       end
-    end
-
-    if selected > 0 then
-      if selected < scroll then scroll = selected end
-      if selected > scroll + rows - 1 then scroll = selected - rows + 1 end
     end
   end
 end
