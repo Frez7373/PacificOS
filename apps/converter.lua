@@ -64,8 +64,13 @@ local function promptConversion(category)
     U.label(2, 11, tostring(amount) .. " " .. fromUnit .. " = " .. tostring(result) .. " " .. toUnit, U._accent)
   end
 
-  U.status("Press any key for categories")
-  os.pullEvent()
+  U.backButton(h - 2)
+  U.status("Press any key | Q/Esc = categories")
+  local e, a, b, c = os.pullEvent()
+  if U.closeEvent(e, a) then return "back" end
+  if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
+    return "back"
+  end
 end
 
 function M.run()
