@@ -1,2 +1,19 @@
-local C=colors
-return {bg=C.black,panel=C.gray,panel2=C.lightBlue,card=C.blue,text=C.white,muted=C.lightGray,accent=C.cyan,good=C.lime,warn=C.yellow,bad=C.red,dark=C.black}
+local C = colors
+
+return {
+  bg = C.white,
+  panel = C.lightBlue,
+  panel2 = C.white,
+  card = C.lightBlue,
+  card2 = C.cyan,
+  text = C.black,
+  textOnBlue = C.white,
+  muted = C.gray,
+  accent = C.blue,
+  accent2 = C.lightBlue,
+  good = C.blue,
+  warn = C.yellow,
+  bad = C.red,
+  dark = C.blue,
+  border = C.blue
+}
