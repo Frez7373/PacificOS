@@ -6,13 +6,14 @@ local M = {}
 local function parent(path)
   path = fs.combine("/", path)
   if path == "/" then return "/" end
-  return fs.combine("/", fs.getDir(path))
+  local dir = fs.getDir(path)
+  return dir == "" and "/" or fs.combine("/", dir)
 end
 
 local function prompt(label)
   local _, h = term.getSize()
-  U.label(2, h - 3, label, U._accent)
-  term.setCursorPos(2, h - 2)
+  U.label(2, math.max(3, h - 3), label, U._accent)
+  term.setCursorPos(2, math.max(4, h - 2))
   write("> ")
   return read()
 end
@@ -31,9 +32,7 @@ local function previewFile(path)
   if not data then return false, err end
 
   local lines = {}
-  for line in (data .. "
-"):gmatch("(.-)
-") do lines[#lines + 1] = line end
+  for line in (data .. "\n"):gmatch("(.-)\n") do lines[#lines + 1] = line end
   local scroll = 1
 
   while true do
@@ -50,18 +49,27 @@ local function previewFile(path)
       U.label(2, 4 + i, lines[index], U._text, math.max(1, w - 3))
     end
 
+    U.backButton(h - 2)
     U.status("Up/Down scroll | Enter/Q/Esc = close")
-    local e, a = os.pullEvent()
+    local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) or (e == "key" and a == keys.enter) then return true end
-    if e == "key" and a == keys.up then scroll = math.max(1, scroll - 1)
-    elseif e == "key" and a == keys.down then scroll = math.min(math.max(1, #lines - maxLines + 1), scroll + 1)
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
+      return true
+    end
+    if e == "key" and a == keys.up then
+      scroll = math.max(1, scroll - 1)
+    elseif e == "key" and a == keys.down then
+      scroll = math.min(math.max(1, #lines - maxLines + 1), scroll + 1)
     end
   end
 end
 
 local function makeName(name)
   name = tostring(name or ""):gsub("^%s+", ""):gsub("%s+$", "")
-  name = name:gsub("[<>:"|%?%*]", "_")
+  -- CC:Tweaked paths are slash-separated. Reject path separators here:
+  -- a file/folder name must stay inside the current directory.
+  name = name:gsub("[<>:\"|%?%*]", "_")
+  name = name:gsub("[/\\]", "_")
   if name == "" or name == "." or name == ".." then return nil end
   return name
 end
@@ -89,9 +97,9 @@ local function doAction(action, path, list, selected)
     if not canCreate(target) then return "Protected system path." end
     if fs.exists(target) then return "File already exists." end
 
-    local h = fs.open(target, "w")
-    if not h then return "Cannot create file." end
-    h.close()
+    local handle = fs.open(target, "w")
+    if not handle then return "Cannot create file." end
+    handle.close()
     return "File created."
 
   elseif action == "New folder" then
@@ -125,7 +133,6 @@ local function doAction(action, path, list, selected)
 
   elseif action == "Copy" and full then
     if Security.isProtected(full) then return "Protected system path." end
-
     local target = destination(prompt("Copy to path:"), item)
     if not target then return "Copy cancelled." end
     if Security.isProtected(target) then return "Protected destination." end
@@ -136,7 +143,6 @@ local function doAction(action, path, list, selected)
 
   elseif action == "Move" and full then
     if Security.isProtected(full) then return "Protected system path." end
-
     local target = destination(prompt("Move to path:"), item)
     if not target then return "Move cancelled." end
     if Security.isProtected(target) then return "Protected destination." end
@@ -152,6 +158,7 @@ local function doAction(action, path, list, selected)
     return "back"
 
   elseif action == "Edit" and full then
+    if fs.isDir(full) then return "Select a file first." end
     local ok, err = editFile(full)
     return ok and "Editor closed." or tostring(err)
 
@@ -173,12 +180,24 @@ local function doAction(action, path, list, selected)
 end
 
 local function toolbar(w, h)
-  local labels = {"Open","Edit","New file","New folder","Rename","Delete","Copy","Move","Up","Back"}
-  local cols = w >= 60 and 5 or (w >= 38 and 3 or 2)
+  local labels
+  if w >= 34 then
+    labels = {"Open","Edit","New","Folder","Rename","Delete","Copy","Move","Up","Back"}
+  elseif w >= 25 then
+    labels = {"Open","Edit","New","Delete","Rename","Copy","Move","Up"}
+  else
+    labels = {"Open","New","Edit","Delete","Up"}
+  end
+
+  local cols
+  if w >= 34 then cols = 5
+  elseif w >= 25 then cols = 4
+  else cols = 3 end
+
   local rows = math.ceil(#labels / cols)
   local gap = 1
-  local bw = math.max(7, math.floor((w - 2 - (cols - 1) * gap) / cols))
-  local startY = h - rows * 2 - 2
+  local bw = math.max(5, math.floor((w - 2 - (cols - 1) * gap) / cols))
+  local startY = math.max(5, h - rows * 2 - 3)
   local result = {}
 
   for i, label in ipairs(labels) do
@@ -186,11 +205,11 @@ local function toolbar(w, h)
     local row = math.floor((i - 1) / cols)
     local x = 2 + col * (bw + gap)
     local y = startY + row * 2
-    if x <= w and y < h then
+    if x <= w and y < h - 1 then
       local buttonW = math.min(bw, w - x + 1)
       local bg = label == "Delete" and colors.red or (label == "Back" and U._accent2 or U._accent)
       U.button(x, y, buttonW, 1, label, bg)
-      result[#result + 1] = {x=x,y=y,w=buttonW,h=1,action=label}
+      result[#result + 1] = {x=x, y=y, w=buttonW, h=1, action=label}
     end
   end
 
@@ -209,12 +228,11 @@ function M.run()
     table.sort(list, function(a,b) return a:lower() < b:lower() end)
 
     local buttons, toolbarY = toolbar(w, h)
-    local rows = math.max(1, toolbarY - 5)
+    local rows = math.max(1, toolbarY - 4)
     local maxScroll = math.max(1, #list - rows + 1)
 
     if selected > #list then selected = math.max(1, #list) end
     if #list == 0 then selected = 1 end
-
     if selected < scroll then scroll = selected end
     if selected > scroll + rows - 1 then scroll = selected - rows + 1 end
     scroll = math.max(1, math.min(scroll, maxScroll))
@@ -222,7 +240,10 @@ function M.run()
     U.clear()
     U.header("Files", true)
     U.label(2, 3, "Path: " .. path, U._accent)
-    U.label(math.max(1, w - 15), 3, tostring(#list) .. " items", U._muted, math.min(15, w - 1))
+    if w >= 24 then
+      local countText = tostring(#list) .. " items"
+      U.label(math.max(1, w - #countText + 1), 3, countText, U._muted)
+    end
 
     if #list == 0 then
       U.label(3, 6, "This directory is empty.", U._muted)
@@ -239,7 +260,7 @@ function M.run()
     end
 
     U.label(2, math.max(4, toolbarY - 1), notice, U._muted, math.max(1, w - 3))
-    U.status("Up/Down select | Enter/Open | N new | R rename | Del delete | Backspace up")
+    U.status("Up/Down select | Enter open | N new | F folder | R rename | Del delete | C copy | M move | Backspace up")
 
     local e, a, b, c = os.pullEvent()
 
@@ -275,11 +296,13 @@ function M.run()
       end
 
     elseif e == "mouse_click" or e == "monitor_touch" then
+      local clickedList = false
       local row = c - 3
       if row >= 1 and row <= math.min(#list, rows) then
         local index = scroll + row - 1
         if index <= #list then
           selected = index
+          clickedList = true
           local action = doAction("Open", path, list, selected)
           if action == "open-dir" then
             path = fs.combine(path, list[selected])
@@ -288,7 +311,12 @@ function M.run()
             notice = action
           end
         end
-      else
+      end
+
+      if not clickedList then
+        if U.backHit(b, c, h - 2, 18) then
+          return
+        end
         for _, r in ipairs(buttons) do
           if U.hit(r.x, r.y, r.w, r.h, b, c) then
             local action = doAction(r.action, path, list, selected)
