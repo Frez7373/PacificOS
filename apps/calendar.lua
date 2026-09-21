@@ -73,6 +73,7 @@ function M.run()
     local navW = math.max(8, math.floor((w - 5) / 2))
     U.button(2, navY, navW, 1, "< PREV", U._accent2)
     U.button(3 + navW, navY, navW, 1, "NEXT >", U._accent2)
+    U.backButton(h - 2)
 
     U.status("Left/Right or PREV/NEXT | Q/Esc/Backspace = back")
 
