@@ -13,11 +13,11 @@ function M.run()
     U.center(8, "2026", U._muted)
 
     U.label(2, math.min(10, h - 3), "System components", U._accent)
-    if h >= 13 then
+    if h >= 14 then
       U.label(3, 11, "Desktop / BIOS / Recovery / Updater", U._text)
       U.label(3, 12, "Files / Editor / Calculator / Network", U._text)
-    elseif h >= 10 then
-      U.label(3, 11, "Desktop / BIOS / Recovery / Apps", U._text)
+    elseif h >= 11 then
+      U.label(3, 10, "Desktop / BIOS / Recovery / Apps", U._text)
     end
 
     U.backButton(h - 2)
