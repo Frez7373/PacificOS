@@ -10,9 +10,11 @@ end
 
 local function diagnostics()
   clear()
+  local w, h = term.getSize()
   term.setBackgroundColor(T.dark)
   term.setTextColor(T.textOnBlue)
-  term.clear()
+  term.setCursorPos(1, 1)
+  write(string.rep(" ", w))
   term.setCursorPos(2, 1)
   write("PACIFICOS RECOVERY - DIAGNOSTICS")
 
@@ -20,7 +22,7 @@ local function diagnostics()
   term.setTextColor(T.text)
   term.setCursorPos(2, 3)
   print("Computer ID: " .. tostring(os.getComputerID()))
-  print("Terminal: " .. select(1, term.getSize()) .. "x" .. select(2, term.getSize()))
+  print("Terminal: " .. w .. "x" .. h)
 
   local free, capacity = "unknown", "unknown"
   pcall(function() free = fs.getFreeSpace("/") end)
@@ -57,8 +59,16 @@ end
 
 local function startSafe()
   clear()
-  print("PACIFICOS SAFE MODE")
-  print("")
+  local w = select(1, term.getSize())
+  term.setBackgroundColor(T.dark)
+  term.setTextColor(T.textOnBlue)
+  term.setCursorPos(1, 1)
+  write(string.rep(" ", w))
+  term.setCursorPos(2, 1)
+  write("PACIFICOS SAFE MODE")
+  term.setBackgroundColor(T.bg)
+  term.setTextColor(T.text)
+  term.setCursorPos(2, 3)
   print("Third-party desktop applications are disabled.")
   print("System applications remain available.")
   print("")
@@ -113,27 +123,33 @@ local selected = 1
 
 while true do
   clear()
+  local w, h = term.getSize()
+
   term.setBackgroundColor(T.dark)
   term.setTextColor(T.textOnBlue)
-  term.clear()
+  term.setCursorPos(1, 1)
+  write(string.rep(" ", w))
   term.setCursorPos(2, 1)
-  write("PACIFICOS RECOVERY 1.8.0")
+  write("PACIFICOS RECOVERY 1.8.1")
 
-  local w, h = term.getSize()
+  term.setBackgroundColor(T.bg)
+  term.setTextColor(T.text)
+
   for i, item in ipairs(items) do
     local y = 4 + i - 1
-    local bg = i == selected and T.accent or T.panel
-    local fg = i == selected and T.textOnBlue or T.text
-    term.setBackgroundColor(bg)
-    term.setTextColor(fg)
+    local active = i == selected
+    term.setBackgroundColor(active and T.dark or T.bg)
+    term.setTextColor(active and T.textOnBlue or T.text)
     term.setCursorPos(2, y)
     write(string.rep(" ", math.max(1, w - 2)))
     term.setCursorPos(3, y)
-    write(item:sub(1, math.max(1, w - 3)))
+    write((active and "> " or "  ") .. item:sub(1, math.max(1, w - 5)))
   end
 
-  term.setBackgroundColor(T.dark)
-  term.setTextColor(T.textOnBlue)
+  term.setBackgroundColor(T.panel)
+  term.setTextColor(T.text)
+  term.setCursorPos(1, h)
+  write(string.rep(" ", w))
   term.setCursorPos(2, h)
   write("Up/Down + Enter | Touch | Esc = shutdown")
 
