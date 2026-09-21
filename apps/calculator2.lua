@@ -152,7 +152,7 @@ function M.run()
     local cols = 4
     local gap = 1
     local bw = math.max(7, math.floor((w - 2 - (cols - 1) * gap) / cols))
-    local startY = 9
+    local startY = h <= 13 and 8 or 9
 
     for i, item in ipairs(items) do
       local col = (i - 1) % cols
@@ -160,7 +160,7 @@ function M.run()
       local x = 2 + col * (bw + gap)
       local y = startY + row
       local bg = item[2] == "=" and U._accent or U._accent2
-      if y <= 13 then
+      if y <= h - 2 then
         U.button(x, y, bw, 1, item[1], bg, item[2] == "=" and colors.white or U._text)
       end
     end
@@ -173,8 +173,9 @@ function M.run()
 
     -- On short terminals the bottom toolbar is intentionally omitted.
     -- The top mode button and Q/Esc remain the reliable navigation controls.
+    local switchY = nil
     if h >= 17 then
-      local switchY = math.min(17, h - 3)
+      switchY = math.min(17, h - 3)
       U.button(2, switchY, toggleWidth, 1,
         state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
       if w >= 24 then
@@ -199,9 +200,9 @@ function M.run()
       state.expr = state.expr .. a
       state.error = nil
     elseif e == "mouse_click" or e == "monitor_touch" then
-      if U.hit(2, 3, toggleWidth, 1, b, c) or U.hit(2, switchY, toggleWidth, 1, b, c) then
+      if U.hit(2, 3, toggleWidth, 1, b, c) or (switchY and U.hit(2, switchY, toggleWidth, 1, b, c)) then
         state.mode = state.mode == "Basic" and "Scientific" or "Basic"
-      elseif w >= 24 and U.hit(18, switchY, math.min(14, w - 18), 1, b, c) then
+      elseif switchY and w >= 24 and U.hit(18, switchY, math.min(14, w - 18), 1, b, c) then
         return
       else
         for i, item in ipairs(items) do
