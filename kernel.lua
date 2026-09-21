@@ -45,6 +45,11 @@ local function layout()
   return cols*rows,cols,rows
 end
 
+local function pageCount(apps)
+  local perPage=select(1,layout())
+  return math.max(1,math.ceil(#apps/perPage))
+end
+
 local function runApp(app)
   term.setBackgroundColor(T.bg)
   term.setTextColor(T.text)
@@ -73,7 +78,7 @@ local function draw()
   local apps=getApps()
   local w,h=term.getSize()
   local perPage,cols,rows=layout()
-  local pages=math.max(1,math.ceil(#apps/perPage))
+  local pages=pageCount(apps)
   local page=math.max(1,math.min(kernelPage or 1,pages))
   kernelPage=page
 
@@ -88,8 +93,7 @@ local function draw()
   U.label(2,6,tostring(C.get("hostname") or "pacificos"),T.muted)
   local third=#ThirdParty.list()
   local badge="CCI 2026"
-  if third>0 then badge=badge.." | "..third.." installed"
-  end
+  if third>0 then badge=badge.." | "..third.." installed" end
   U.label(math.max(1,w-#badge),6,badge,T.muted)
 
   local gap=2
@@ -104,23 +108,31 @@ local function draw()
     local x=3+col*(bw+gap)
     local y=8+row*3
     local bg=app.external and T.panel2 or T.card
-    U.button(x,y,bw,2,app.name,bg)
+    U.button(x,y,bw,2,app.name,bg,T.text)
   end
 
-  local fy=math.max(1,h-2)
-  local prevW=12
-  local nextW=12
-  local shutW=14
+  -- Navigation is kept on its own row so the page label can never
+  -- overwrite the NEXT button again.
+  local buttonY=math.max(1,h-2)
+  local pageY=math.max(1,h-4)
+
   if w>=42 then
-    U.button(2,fy,prevW,"",T.dark)
-    U.button(2,fy,prevW,"< PREV",kernelPage>1 and T.card or T.dark)
-    local nx=math.max(prevW+4,math.floor((w-nextW)/2))
-    U.button(nx,fy,nextW,"NEXT >",kernelPage<pages and T.card or T.dark)
-    U.button(math.max(nx+nextW+2,w-shutW+1),fy,shutW,"SHUTDOWN",T.card)
-    U.center(fy,"Page "..kernelPage.."/"..pages,T.muted)
-  else
-    U.center(fy,"Page "..kernelPage.."/"..pages,T.muted)
+    local prevX=2
+    local prevW=10
+    local nextX=14
+    local nextW=10
+    local shutW=12
+    local shutX=w-shutW+1
+
+    U.button(prevX,buttonY,prevW,1,"< PREV",page>1 and T.card or T.dark,T.text)
+    U.button(nextX,buttonY,nextW,1,"NEXT >",page<pages and T.card or T.dark,T.text)
+    U.button(shutX,buttonY,shutW,1,"SHUTDOWN",T.card,T.text)
+  elseif w>=30 then
+    U.button(2,buttonY,9,1,"<",page>1 and T.card or T.dark,T.text)
+    U.button(w-10,buttonY,9,1,">",page<pages and T.card or T.dark,T.text)
   end
+
+  U.center(pageY,"Page "..page.."/"..pages,T.muted)
   U.label(2,h,"Network "..(#N.list()>0 and "AVAILABLE" or "OFFLINE").." | Devices "..tostring(#D.list()),T.muted)
 end
 
@@ -153,29 +165,41 @@ while true do
 
   if e=="mouse_click" or e=="monitor_touch" then
     local x,y=b,c
-    local fy=math.max(1,h-2)
-    if y>=fy and y<h then
-      local prevW=12
-      local nextW=12
-      local shutW=14
+    local buttonY=math.max(1,h-2)
+
+    if y>=buttonY and y<buttonY+1 then
       if w>=42 then
-        local nx=math.max(prevW+4,math.floor((w-nextW)/2))
-        if x>=2 and x<2+prevW then kernelPage=math.max(1,kernelPage-1)
-        elseif x>=nx and x<nx+nextW then
-          local total=math.ceil(#getApps()/layout())
-          kernelPage=math.min(math.max(1,total),kernelPage+1)
-        elseif x>=w-shutW+1 then os.shutdown() end
+        local prevW=10
+        local nextX=14
+        local nextW=10
+        local shutW=12
+        local shutX=w-shutW+1
+
+        if x>=2 and x<2+prevW then
+          kernelPage=math.max(1,kernelPage-1)
+        elseif x>=nextX and x<nextX+nextW then
+          kernelPage=math.min(pageCount(getApps()),kernelPage+1)
+        elseif x>=shutX and x<=w then
+          os.shutdown()
+        end
+      elseif w>=30 then
+        if x>=2 and x<11 then
+          kernelPage=math.max(1,kernelPage-1)
+        elseif x>=w-10 and x<=w then
+          kernelPage=math.min(pageCount(getApps()),kernelPage+1)
+        end
       end
     else
       local app=hitApp(x,y)
       if app then runApp(app) end
     end
+
   elseif e=="key" then
     local apps=getApps()
+    local pages=pageCount(apps)
     if a==keys.f12 then os.shutdown()
     elseif a==keys.left then kernelPage=math.max(1,kernelPage-1)
-    elseif a==keys.right or a==keys.pageDown then
-      kernelPage=math.min(math.max(1,math.ceil(#apps/layout())),kernelPage+1)
+    elseif a==keys.right or a==keys.pageDown then kernelPage=math.min(pages,kernelPage+1)
     elseif a==keys.pageUp then kernelPage=math.max(1,kernelPage-1)
     elseif a==keys.f1 and apps[1] then runApp(apps[1])
     elseif a==keys.f2 and apps[2] then runApp(apps[2])
