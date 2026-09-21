@@ -1,8 +1,8 @@
--- PacificOS 1.7.0 installer
+-- PacificOS 1.7.1 installer
 local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT="/pacificos"
-local VERSION="1.7.0"
-local CACHE="20260921-170"
+local VERSION="1.7.1"
+local CACHE="20260921-171"
 local files={
   "boot.lua","bios.lua","kernel.lua","manifest.lua",
   "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
