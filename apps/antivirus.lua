@@ -81,7 +81,10 @@ function M.run()
 
     for i, item in ipairs(items) do
       local bg = i == selected and U._accent or U._accent2
-      U.button(2, 7 + (i - 1) * 3, math.min(30, w - 3), 2, item, bg)
+      local menuY = 7 + (i - 1) * 2
+      if menuY < h - 2 then
+        U.button(2, menuY, math.min(30, w - 3), 1, item, bg)
+      end
     end
 
     U.backButton(h - 2)
@@ -100,8 +103,8 @@ function M.run()
     elseif e == "mouse_click" or e == "monitor_touch" then
       if U.backHit(b, c, h - 2, 18) then return end
       for i = 1, #items do
-        local by = 7 + (i - 1) * 3
-        if U.hit(2, by, math.min(30, w - 3), 2, b, c) then
+        local by = 7 + (i - 1) * 2
+        if by < h - 2 and U.hit(2, by, math.min(30, w - 3), 1, b, c) then
           if i == 1 then showResult("Quick")
           elseif i == 2 then showResult("Full")
           else return end
