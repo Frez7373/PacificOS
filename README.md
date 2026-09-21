@@ -1,57 +1,56 @@
 # PacificOS
 
-**PacificOS 1.0.0** is a modern, touch-first desktop environment and operating-system layer for CC:Tweaked.
+**PacificOS 1.6.0** is a modern, touch-friendly desktop operating system for CC:Tweaked.
 
 ## Install
 
-Enable the HTTP API and run:
+Enable the CC:Tweaked HTTP API and run:
 
 ```lua
 wget run https://raw.githubusercontent.com/Frez7373/PacificOS/main/installer.lua
 ```
 
-The installer creates `/pacificos`, installs `/startup.lua`, and reboots.
+The installer installs the current PacificOS files into `/pacificos`, installs `/startup.lua`, and reboots.
 
-## Recovery
+## Third-party applications
 
-During boot, press `R` after a boot failure, or run:
+PacificOS 1.6 adds a built-in **App Installer**.
 
-```text
-/pacificos/recovery/recovery.lua
-```
+From the desktop open **App Installer** and choose:
 
-Recovery includes normal start, safe mode, diagnostics, factory reset, reinstall and shutdown.
+- **WGET** — paste a direct HTTP/HTTPS URL to a Lua application.
+- **PASTEBIN** — enter a Pastebin code or Pastebin URL.
+- The downloaded Lua is syntax-checked before installation.
+- The installer stores third-party apps in `/pacificos/userapps/`.
+- Installed apps are registered in `/pacificos/data/apps.cfg`.
+- Every new app is automatically added to the PacificOS desktop.
+- The installer can launch, hide/show a desktop shortcut, and uninstall apps.
+- A failed third-party application is isolated with `pcall` so its error returns to the desktop instead of crashing the whole launcher.
 
-## Included
+An installed application should either return a table containing `run()` or behave as a normal CC:Tweaked Lua program.
 
-- Boot animation and guarded startup
-- Custom module loader; no Lua `require()`
-- Event-driven desktop
-- Adaptive layout based on `term.getSize()`
-- Mouse and monitor-touch activation
-- Settings
-- File Manager
-- Text Editor
-- Calculator
-- Clock and Calendar
-- Network Manager
-- Device Manager
-- Terminal
+## Built-in features
+
+- Guarded boot screen and recovery
+- Adaptive desktop for normal computers, advanced computers and monitor touch
+- Reliable desktop pagination
+- Settings and local configuration
+- File Manager with create, rename, copy, move and delete
+- Calculator with trigonometry, powers, factorial, gcd/lcm and more
+- Clock and calendar
+- Network and device tools
+- Text editor and terminal
 - Task Manager diagnostics
-- Updater
-- Pacific Antivirus scan UI
-- System Information and About
+- Working system updater
+- Antivirus UI
+- System information
 - Factory reset and recovery
-- System logging helpers
-- Modem/peripheral discovery
 
-## Design goals
-
-PacificOS favors stability over pretending CC:Tweaked has kernel facilities it does not provide. Applications are run behind `pcall`, hardware is discovered dynamically, and the GUI waits on events instead of spinning continuously.
+PacificOS does **not** use Lua `require()`. Its internal modules use CC:Tweaked-compatible file loading.
 
 ## Important limitation
 
-CC:Tweaked does not expose true protected processes, memory protection, hardware interrupts, or a full multitasking kernel to Lua programs. PacificOS 1.0 therefore uses cooperative application sessions rather than claiming to provide a native process scheduler. A future release can add a more advanced cooperative window compositor without changing the low-level compatibility layer.
+CC:Tweaked does not provide true protected processes or native memory isolation for Lua applications. PacificOS therefore uses guarded cooperative application sessions rather than claiming full process isolation.
 
 ## Repository
 
