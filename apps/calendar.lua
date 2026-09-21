@@ -24,7 +24,6 @@ local function mondayIndex(year, month)
   local k = y % 100
   local j = math.floor(y / 100)
   local h = (1 + math.floor(13 * (m + 1) / 5) + k + math.floor(k / 4) + math.floor(j / 4) + 5 * j) % 7
-  -- Zeller: 0=Saturday, 1=Sunday, 2=Monday...
   return (h + 5) % 7
 end
 
@@ -33,6 +32,23 @@ local function changeMonth(year, month, delta)
   if month < 1 then month = 12; year = year - 1 end
   if month > 12 then month = 1; year = year + 1 end
   return year, month
+end
+
+local function footer(w, h)
+  local y = math.max(1, h - 2)
+  local small = w < 28
+  local bw = small and math.max(5, math.floor((w - 4) / 3)) or 8
+  local gap = 1
+  local xPrev = 2
+  local xNext = xPrev + bw + gap
+  local xBack = small and (xNext + bw + gap) or math.max(1, w - bw + 1)
+  local backW = small and math.max(5, w - xBack + 1) or bw
+
+  U.button(xPrev, y, bw, 1, small and "<" or "< PREV", U._accent2)
+  U.button(xNext, y, bw, 1, small and ">" or "NEXT >", U._accent2)
+  if xBack <= w then U.button(xBack, y, backW, 1, "BACK", U._accent) end
+
+  return y, xPrev, bw, xNext, xBack, backW
 end
 
 function M.run()
@@ -49,48 +65,46 @@ function M.run()
     U.center(4, months[month] .. " " .. tostring(year), U._accent)
     U.label(2, 6, "Today: " .. tostring(now.day) .. " " .. months[now.month] .. " " .. tostring(now.year), U._muted)
 
-    local cell = math.max(4, math.floor((w - 6) / 7))
+    local cell = math.max(3, math.floor((w - 6) / 7))
     local x0 = 3
     for i, name in ipairs(week) do
       U.label(x0 + (i - 1) * cell, 8, name:sub(1, math.min(#name, cell)), U._accent)
     end
 
+    local footerY = h - 2
     for day = 1, total do
       local slot = offset + day - 1
       local col = slot % 7
       local row = math.floor(slot / 7)
       local x = x0 + col * cell
       local y = 9 + row
-      if y < h - 4 then
+      if y < footerY then
         local today = day == now.day and month == now.month and year == now.year
-        U.button(x, y, math.max(3, cell - 1), 1, tostring(day),
+        U.button(x, y, math.max(2, cell - 1), 1, tostring(day),
           today and U._accent or U._accent2,
           today and U._textOnBlue or U._text)
       end
     end
 
-    local navY = math.max(15, h - 3)
-    local navW = math.max(8, math.floor((w - 5) / 2))
-    U.button(2, navY, navW, 1, "< PREV", U._accent2)
-    U.button(3 + navW, navY, navW, 1, "NEXT >", U._accent2)
-    U.backButton(h - 2)
-
-    U.status("Left/Right or PREV/NEXT | Q/Esc/Backspace = back")
+    local navY, xPrev, bw, xNext, xBack, backW = footer(w, h)
+    U.status("Left/Right = month | Prev/Next or touch | Q/Esc = back")
 
     local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) then return end
 
     if e == "key" then
-      if a == keys.left then year, month = changeMonth(year, month, -1)
-      elseif a == keys.right then year, month = changeMonth(year, month, 1)
+      if a == keys.left then
+        year, month = changeMonth(year, month, -1)
+      elseif a == keys.right then
+        year, month = changeMonth(year, month, 1)
       end
     elseif e == "mouse_click" or e == "monitor_touch" then
-      if U.backHit(b, c, h - 2, 18) then
-        return
-      elseif U.hit(2, navY, navW, 1, b, c) then
+      if U.hit(xPrev, navY, bw, 1, b, c) then
         year, month = changeMonth(year, month, -1)
-      elseif U.hit(3 + navW, navY, navW, 1, b, c) then
+      elseif U.hit(xNext, navY, bw, 1, b, c) then
         year, month = changeMonth(year, month, 1)
+      elseif xBack <= w and U.hit(xBack, navY, backW, 1, b, c) then
+        return
       end
     end
 
