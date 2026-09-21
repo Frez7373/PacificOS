@@ -1,12 +1,16 @@
 local M = {}
 
+local function isPrefix(path, prefix)
+  return path == prefix or path:sub(1, #prefix + 1) == prefix .. "/"
+end
+
 function M.confirm(message, keyword)
+  keyword = keyword or "YES"
   term.setTextColor(colors.yellow)
   print(tostring(message or "Confirm this action"))
   term.setTextColor(colors.white)
-  write("Type " .. tostring(keyword or "YES") .. ": ")
-  local input = read()
-  return input == (keyword or "YES")
+  write("Type " .. keyword .. ": ")
+  return read() == keyword
 end
 
 function M.log(message)
@@ -24,20 +28,17 @@ function M.isProtected(path)
   return path == "/"
     or path == "/startup.lua"
     or path == "/pacificos"
-    or path == "/pacificos/system"
-    or path == "/pacificos/ui"
-    or path == "/pacificos/recovery"
+    or isPrefix(path, "/pacificos/system")
+    or isPrefix(path, "/pacificos/ui")
+    or isPrefix(path, "/pacificos/recovery")
     or path == "/pacificos/kernel.lua"
     or path == "/pacificos/boot.lua"
     or path == "/pacificos/bios.lua"
-    or path:sub(1, 16) == "/pacificos/system/"
-    or path:sub(1, 13) == "/pacificos/ui/"
-    or path:sub(1, 19) == "/pacificos/recovery/"
 end
 
 function M.isUserPath(path)
   path = fs.combine("/", tostring(path or ""))
-  return path == "/pacificos/user" or path:sub(1, 16) == "/pacificos/user/"
+  return isPrefix(path, "/pacificos/user") or isPrefix(path, "/pacificos/userapps")
 end
 
 return M
