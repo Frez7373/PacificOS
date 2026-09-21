@@ -1,20 +1,32 @@
-local U=dofile("/pacificos/ui/widgets.lua")
-local M={}
+local U = dofile("/pacificos/ui/widgets.lua")
+local M = {}
+
 function M.run()
   while true do
-    local w,h=term.getSize()
-    U.clear(); U.header("About PacificOS")
-    U.label(3,5,"PacificOS 1.7.4",colors.cyan)
-    U.label(3,7,"A modern operating system for CC:Tweaked.")
-    U.label(3,9,"Designed and developed by")
-    U.label(3,10,"Complex Computer International (CCI)",colors.white)
-    U.label(3,12,"CCI 2026",colors.lightGray)
-    U.label(3,14,"Third-party apps can be installed with WGET or Pastebin.",colors.lightGray)
-    U.button(3,h-3,20,2,"Back",colors.gray)
+    local w, h = term.getSize()
+    U.clear()
+    U.header("About PacificOS", true)
+
+    U.center(4, "PACIFICOS 1.8.0", U._accent)
+    U.center(6, "A stable, touch-friendly OS for CC:Tweaked.", U._text)
+    U.center(8, "Complex Computer International (CCI)", U._accent)
+    U.center(9, "2026", U._muted)
+
+    U.label(3, 11, "Built-in services", U._accent)
+    U.label(5, 12, "Desktop, BIOS, Recovery, Updater")
+    U.label(5, 13, "Files, Editor, Calculator, Network")
+    U.label(5, 14, "Devices, Monitor, Antivirus, App Installer")
+
+    U.label(3, math.min(16, h - 4), "Third-party apps are stored separately in userapps.", U._muted)
+    U.backButton(h - 2)
     U.status("Q / Esc / Backspace = close")
-    local e,a,b,c=os.pullEvent()
-    if e=="key" and (a==keys.q or a==keys.escape or a==keys.backspace) then return
-    elseif (e=="mouse_click" or e=="monitor_touch") and b>=3 and b<23 and c>=h-3 and c<h-1 then return end
+
+    local e, a, b, c = os.pullEvent()
+    if U.closeEvent(e, a) then return end
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
+      return
+    end
   end
 end
+
 return M
