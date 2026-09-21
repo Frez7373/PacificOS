@@ -165,24 +165,22 @@ function M.run()
       end
     end
 
-    local recentY = 15
-    if #state.history > 0 then
-      U.label(2, recentY, "Last: " .. state.history[#state.history], U._muted, math.max(1, w - 3))
+    local keypadRows = math.ceil(#items / cols)
+    local keypadBottom = startY + keypadRows - 1
+    if keypadBottom < h - 4 and #state.history > 0 then
+      U.label(2, keypadBottom + 2, "Last: " .. state.history[#state.history], U._muted, math.max(1, w - 3))
     end
 
-    local switchY = 17
-    if h >= 19 then
+    -- On short terminals the bottom toolbar is intentionally omitted.
+    -- The top mode button and Q/Esc remain the reliable navigation controls.
+    if h >= 17 then
+      local switchY = math.min(17, h - 3)
       U.button(2, switchY, toggleWidth, 1,
         state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
       if w >= 24 then
         local backWidth = math.min(14, w - 18)
         U.button(18, switchY, backWidth, 1, "BACK", U._accent2)
       end
-    else
-      switchY = h - 2
-      U.button(2, switchY, toggleWidth, 1,
-        state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
-      if w >= 24 then U.button(18, switchY, math.min(14, w - 18), 1, "BACK", U._accent2) end
     end
 
     U.status("Keyboard + touch | Enter = result | Backspace = delete | Q/Esc = back")
