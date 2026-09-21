@@ -29,6 +29,7 @@ local builtins = {
 
 local function getApps()
   local result = {}
+
   for _, app in ipairs(builtins) do
     result[#result + 1] = {
       name = app[1],
@@ -54,7 +55,7 @@ end
 local function layout()
   local w, h = term.getSize()
   local columns = w >= 76 and 4 or (w >= 50 and 3 or (w >= 31 and 2 or 1))
-  local rows = math.max(1, math.floor((h - 7) / 3))
+  local rows = math.max(1, math.floor((h - 8) / 3))
   return columns * rows, columns, rows
 end
 
@@ -120,14 +121,76 @@ local function drawDesktop()
   kernelPage = math.max(1, math.min(kernelPage or 1, pages))
 
   U.clear(T.bg)
-  U.fill(1, 1, w, 2, T.dark, T.textOnBlue)
 
-  U.label(2, 1, "PACIFICOS", T.textOnBlue)
-  U.label(2, 2, tostring(C.get("hostname") or "pacificos"), T.text)
+  -- Classic Windows desktop title bar.
+  U.fill(1, 1, w, 1, T.dark, T.textOnBlue)
+  U.label(2, 1, "PacificOS Desktop", T.textOnBlue, math.max(1, w - 20))
+
+  local right = "ID " .. tostring(os.getComputerID())
+  U.label(math.max(1, w - #right + 1), 1, right, T.textOnBlue)
+
+  -- Quiet grey menu strip: familiar, but not cluttered.
+  U.fill(1, 2, w, 1, T.panel, T.text)
+  U.label(2, 2, "Start   Apps   System   Help", T.text, math.max(1, w - 2))
 
   local clock = textutils.formatTime(os.time(), C.get("show_seconds") == true)
-  local right = clock .. "  ID " .. tostring(os.getComputerID())
-  U.label(math.max(1, w - #right + 1), 1, right, T.textOnBlue)
+  local clockText = clock
+  if w >= 28 then
+    U.label(math.max(1, w - #clockText + 1), 2, clockText, T.text)
+  end
+
+  local gap = 2
+  local bw = math.max(9, math.floor((w - 6 - (columns - 1) * gap) / columns))
+  local first = (kernelPage - 1) * perPage + 1
+  local appBottom = h - 4
+
+  -- Desktop applications are deliberately grey instead of bright coloured tiles.
+  for offset = 0, perPage - 1 do
+    local app = apps[first + offset]
+    if not app then break end
+
+    local col = offset % columns
+    local row = math.floor(offset / columns)
+    local x = 3 + col * (bw + gap)
+    local y = 4 + row * 3
+
+    if y + 1 <= appBottom then
+      U.button(
+        x,
+        y,
+        bw,
+        2,
+        app.name,
+        app.external and T.panel or T.card,
+        T.text
+      )
+    end
+  end
+
+  -- Classic taskbar.
+  U.fill(1, h - 2, w, 3, T.panel, T.text)
+
+  if w >= 42 then
+    U.button(2, h - 2, 10, 1, "START", T.face, T.text)
+    U.button(14, h - 2, 10, 1, "< PREV",
+      kernelPage > 1 and T.face or T.panel, T.text)
+    U.button(26, h - 2, 10, 1, "NEXT >",
+      kernelPage < pages and T.face or T.panel, T.text)
+    U.button(w - 11, h - 2, 10, 1, "POWER", T.face, T.text)
+  elseif w >= 25 then
+    U.button(2, h - 2, 7, 1, "START", T.face, T.text)
+    U.button(11, h - 2, 5, 1, "<", kernelPage > 1 and T.face or T.panel, T.text)
+    U.button(17, h - 2, 6, 1, "NEXT", kernelPage < pages and T.face or T.panel, T.text)
+    U.button(w - 5, h - 2, 4, 1, "OFF", T.face, T.text)
+  end
+
+  local page = "Page " .. tostring(kernelPage) .. "/" .. tostring(pages)
+  U.center(h - 1, page, T.text)
+
+  local net = N.status()
+  local networkState =
+    net.opened > 0 and "ONLINE"
+    or (#net.modems > 0 and "READY" or "NO MODEM")
 
   local badge
   if _G.PACIFICOS_SAFE_MODE then
@@ -136,90 +199,10 @@ local function drawDesktop()
     local count = #ThirdParty.list()
     badge = count > 0 and ("CCI 2026 | " .. count .. " apps") or "CCI 2026"
   end
-  U.label(math.max(1, w - #badge + 1), 2, badge, T.text)
 
-  local gap = 2
-  local bw = math.max(
-    9,
-    math.floor((w - 6 - (columns - 1) * gap) / columns)
-  )
-  local first = (kernelPage - 1) * perPage + 1
-
-  for offset = 0, perPage - 1 do
-    local app = apps[first + offset]
-    if not app then
-      break
-    end
-
-    local col = offset % columns
-    local row = math.floor(offset / columns)
-    local x = 3 + col * (bw + gap)
-    local y = 4 + row * 3
-
-    U.button(
-      x,
-      y,
-      bw,
-      2,
-      app.name,
-      app.external and T.card2 or T.card,
-      app.external and T.textOnBlue or T.text
-    )
-  end
-
-  local buttonY = math.max(4, h - 3)
-  local pageY = math.max(3, h - 2)
-
-  if w >= 42 then
-    U.button(
-      2,
-      buttonY,
-      10,
-      1,
-      "< PREV",
-      kernelPage > 1 and T.card or T.panel
-    )
-    U.button(
-      14,
-      buttonY,
-      12,
-      1,
-      "NEXT >",
-      kernelPage < pages and T.card or T.panel
-    )
-    U.button(w - 11, buttonY, 10, 1, "POWER", T.card)
-  elseif w >= 25 then
-    U.button(
-      2,
-      buttonY,
-      5,
-      1,
-      "<",
-      kernelPage > 1 and T.card or T.panel
-    )
-    U.button(
-      8,
-      buttonY,
-      7,
-      1,
-      "NEXT",
-      kernelPage < pages and T.card or T.panel
-    )
-    U.button(w - 6, buttonY, 5, 1, "OFF", T.card)
-  end
-
-  U.center(pageY, "Page " .. kernelPage .. "/" .. pages, T.muted)
-
-  local net = N.status()
-  local networkState =
-    net.opened > 0 and "ONLINE"
-    or (#net.modems > 0 and "READY" or "NO MODEM")
-
-  U.status(
-    "Network " .. networkState ..
-    " | Devices " .. tostring(#D.list()) ..
-    " | Left/Right = pages"
-  )
+  local status = badge .. " | Network " .. networkState ..
+    " | Devices " .. tostring(#D.list())
+  U.label(2, h, status, T.text, math.max(1, w - 2))
 end
 
 local function hitApp(x, y)
@@ -227,15 +210,10 @@ local function hitApp(x, y)
   local perPage, columns = layout()
   local w, h = term.getSize()
 
-  if y < 4 or y >= h - 3 then
-    return nil
-  end
+  if y < 4 or y >= h - 4 then return nil end
 
   local gap = 2
-  local bw = math.max(
-    9,
-    math.floor((w - 6 - (columns - 1) * gap) / columns)
-  )
+  local bw = math.max(9, math.floor((w - 6 - (columns - 1) * gap) / columns))
   local first = (kernelPage - 1) * perPage + 1
 
   for offset = 0, perPage - 1 do
@@ -258,17 +236,16 @@ end
 
 local function handleNavigation(x, y)
   local w, h = term.getSize()
-  local buttonY = math.max(4, h - 3)
 
-  if y < buttonY or y >= buttonY + 1 then
+  if y < h - 2 or y >= h - 1 then
     return false
   end
 
   if w >= 42 then
-    if x >= 2 and x < 12 then
+    if x >= 14 and x < 24 then
       kernelPage = math.max(1, kernelPage - 1)
       return true
-    elseif x >= 14 and x < 26 then
+    elseif x >= 26 and x < 36 then
       kernelPage = math.min(pageCount(getApps()), kernelPage + 1)
       return true
     elseif x >= w - 11 then
@@ -276,13 +253,13 @@ local function handleNavigation(x, y)
       return true
     end
   elseif w >= 25 then
-    if x >= 2 and x < 7 then
+    if x >= 11 and x < 16 then
       kernelPage = math.max(1, kernelPage - 1)
       return true
-    elseif x >= 8 and x < 15 then
+    elseif x >= 17 and x < 23 then
       kernelPage = math.min(pageCount(getApps()), kernelPage + 1)
       return true
-    elseif x >= w - 6 then
+    elseif x >= w - 5 then
       os.shutdown()
       return true
     end
@@ -299,13 +276,9 @@ while true do
   local e, a, b, c = os.pullEvent()
 
   if e == "mouse_click" or e == "monitor_touch" then
-    local x, y = b, c
-
-    if not handleNavigation(x, y) then
-      local app = hitApp(x, y)
-      if app then
-        runApp(app)
-      end
+    if not handleNavigation(b, c) then
+      local app = hitApp(b, c)
+      if app then runApp(app) end
     end
 
   elseif e == "key" then
