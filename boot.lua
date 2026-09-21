@@ -1,9 +1,9 @@
 -- PacificOS 1.8.0 boot
 local ROOT = "/pacificos"
 local T = dofile(ROOT .. "/ui/theme.lua")
+local C = dofile(ROOT .. "/system/config.lua")
 
 local function showError(title, message)
-  local w, h = term.getSize()
   term.setBackgroundColor(T.bg)
   term.setTextColor(T.text)
   term.clear()
@@ -16,6 +16,7 @@ local function showError(title, message)
   print("")
   term.setTextColor(T.muted)
   print("R = Recovery   Q = Shutdown")
+
   while true do
     local e, k = os.pullEvent()
     if e == "key" and k == keys.r then
@@ -37,9 +38,7 @@ local function runBIOS()
   end
 
   local okRun, err = pcall(bios.run)
-  if not okRun then
-    showError("PACIFICOS BIOS ERROR", err)
-  end
+  if not okRun then showError("PACIFICOS BIOS ERROR", err) end
 end
 
 local function waitForBIOS()
@@ -85,10 +84,11 @@ term.clear()
 
 local function center(y, text, fg)
   text = tostring(text or "")
-  local x = math.max(1, math.floor((w - #text) / 2) + 1)
+  local shown = text:sub(1, w)
+  local x = math.max(1, math.floor((w - #shown) / 2) + 1)
   term.setCursorPos(x, math.max(1, y))
   term.setTextColor(fg or T.text)
-  write(text:sub(1, w))
+  write(shown)
 end
 
 local function progress(y, percent)
@@ -121,23 +121,32 @@ local steps = {
   "Graphical interface"
 }
 
+local animation = C.get("animations") ~= false
+local stepDelay = tonumber(C.get("boot_delay")) or 0.2
+if stepDelay < 0 then stepDelay = 0 end
+if stepDelay > 2 then stepDelay = 2 end
+if not animation then stepDelay = 0 end
+
 for i, step in ipairs(steps) do
   local percent = math.floor((i - 1) * 100 / #steps)
   progress(math.min(h - 4, centerY + 7), percent)
+
   term.setCursorPos(2, math.min(h - 2, centerY + 9))
   term.setTextColor(T.muted)
   write(step:sub(1, math.max(1, w - 12)))
+
   term.setTextColor(T.accent)
   term.setCursorPos(math.max(1, w - 6), math.min(h - 2, centerY + 9))
   write(string.format("%3d%%", percent))
-  os.sleep(0.08)
+
+  if stepDelay > 0 then os.sleep(stepDelay) end
 end
 
 progress(math.min(h - 4, centerY + 7), 100)
 term.setTextColor(T.accent)
 term.setCursorPos(2, math.min(h - 2, centerY + 9))
 write("SYSTEM READY")
-os.sleep(0.15)
+if animation then os.sleep(math.min(0.15, stepDelay > 0 and stepDelay or 0.15)) end
 
 if not fs.exists(ROOT .. "/kernel.lua") then
   showError("PACIFICOS STARTUP ERROR", "System kernel is missing.")
