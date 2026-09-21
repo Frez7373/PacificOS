@@ -1,13 +1,43 @@
-local M={}
-function M.confirm(message)
-  term.setTextColor(colors.yellow); print(message); term.setTextColor(colors.white); write("Type YES: ")
-  local s=read(); return s=="YES"
+local M = {}
+
+function M.confirm(message, keyword)
+  term.setTextColor(colors.yellow)
+  print(tostring(message or "Confirm this action"))
+  term.setTextColor(colors.white)
+  write("Type " .. tostring(keyword or "YES") .. ": ")
+  local input = read()
+  return input == (keyword or "YES")
 end
+
 function M.log(message)
-  if not fs.exists("/pacificos/logs") then fs.makeDir("/pacificos/logs") end
-  local h=fs.open("/pacificos/logs/system.log","a"); if h then h.writeLine(os.date("%Y-%m-%d %H:%M:%S").." "..tostring(message)); h.close() end
+  local dir = "/pacificos/logs"
+  if not fs.exists(dir) then fs.makeDir(dir) end
+  local handle = fs.open(dir .. "/system.log", "a")
+  if handle then
+    handle.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(message))
+    handle.close()
+  end
 end
-function M.safe(path)
-  return path=="/pacificos" or path=="/startup.lua" or path:sub(1,10)=="/pacificos/" and (path:find("/system/") or path:find("/ui/") or path=="/pacificos/kernel.lua")
+
+function M.isProtected(path)
+  path = fs.combine("/", tostring(path or ""))
+  return path == "/"
+    or path == "/startup.lua"
+    or path == "/pacificos"
+    or path == "/pacificos/system"
+    or path == "/pacificos/ui"
+    or path == "/pacificos/recovery"
+    or path == "/pacificos/kernel.lua"
+    or path == "/pacificos/boot.lua"
+    or path == "/pacificos/bios.lua"
+    or path:sub(1, 16) == "/pacificos/system/"
+    or path:sub(1, 13) == "/pacificos/ui/"
+    or path:sub(1, 19) == "/pacificos/recovery/"
 end
+
+function M.isUserPath(path)
+  path = fs.combine("/", tostring(path or ""))
+  return path == "/pacificos/user" or path:sub(1, 16) == "/pacificos/user/"
+end
+
 return M
