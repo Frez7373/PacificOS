@@ -106,11 +106,10 @@ function W.button(x, y, width, height, label, bg, fg)
   if type(height) ~= "number" then
     local oldLabel = height
     local oldBg = label
-    local oldFg = bg
     height = 1
     label = oldLabel
     bg = oldBg
-    fg = oldFg
+    fg = T.text
   end
 
   local screenW, screenH = term.getSize()
@@ -167,12 +166,8 @@ function W.header(title, back)
   term.setCursorPos(2, 1)
   write(fit("PACIFICOS - " .. tostring(title or ""), math.max(1, screenW - 12)))
 
-  if back and screenW >= 8 then
-    term.setBackgroundColor(T.dark)
-    term.setTextColor(T.textOnBlue)
-    term.setCursorPos(math.max(1, screenW - 5), 1)
-    write("[X]")
-  end
+  -- The title bar stays visual-only. Applications provide their own
+  -- working Back/Close controls so a decorative X cannot trap input.
 
   W.fill(1, 2, screenW, 1, T.panel, T.text)
   term.setCursorPos(2, 2)
