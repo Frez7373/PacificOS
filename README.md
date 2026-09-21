@@ -1,6 +1,6 @@
 # PacificOS
 
-**PacificOS 1.6.0** is a modern, touch-friendly desktop operating system for CC:Tweaked.
+**PacificOS 1.8.0** is a modern, touch-friendly desktop operating system for CC:Tweaked.
 
 ## Install
 
@@ -10,48 +10,75 @@ Enable the CC:Tweaked HTTP API and run:
 wget run https://raw.githubusercontent.com/Frez7373/PacificOS/main/installer.lua
 ```
 
-The installer installs the current PacificOS files into `/pacificos`, installs `/startup.lua`, and reboots.
+The bootstrap installer downloads the current stable system into `/pacificos`, uses a staging area and rollback backup, preserves the existing PacificOS configuration, and installs `/startup.lua`.
+
+## Interface
+
+- White-and-blue PacificOS theme
+- Responsive layout for different terminal sizes
+- Mouse and monitor touch support
+- Keyboard navigation
+- Stable desktop pagination with Previous/Next/Power controls
+- BIOS entry with the `]` key during startup
+- Recovery environment and Safe Mode
+- Boot animation controlled from Settings
+
+## Built-in applications
+
+- **Files** — folder navigation, scrolling, create, rename, copy, move, delete, preview and editor integration
+- **Text Editor** — line-based editing with add/edit/delete/save and protected system files
+- **Calculator** — Basic and Scientific pages, history, ANS, trigonometry, powers, logarithms, factorial, gcd/lcm and more
+- **Clock** — live clock, date and computer uptime
+- **Calendar** — real month calendar with leap years and touch/keyboard month navigation
+- **Converter** — length, mass and time conversions
+- **Network Manager** — modem detection, enable/disable, open all modems and broadcast test
+- **Device Manager** — peripheral list and method details
+- **System Information** — terminal, CraftOS, storage and peripheral information
+- **System Monitor** — live uptime, memory, storage and network status
+- **Task Manager** — current session and memory diagnostics
+- **Antivirus** — Lua syntax scanning for system and user applications
+- **App Installer** — WGET/Pastebin installation, syntax validation, desktop shortcuts and uninstall
+- **System Updater** — version check, staged update and rollback
+- **Terminal** — direct CC:Tweaked shell commands
+- **Settings** — persistent hostname, appearance, network, notification and boot options
+- **About** — CCI information
 
 ## Third-party applications
 
-PacificOS 1.6 adds a built-in **App Installer**.
+PacificOS stores installed third-party applications under `/pacificos/userapps/` and their registry in `/pacificos/data/apps.cfg`.
 
-From the desktop open **App Installer** and choose:
+The App Installer supports:
 
-- **WGET** — paste a direct HTTP/HTTPS URL to a Lua application.
-- **PASTEBIN** — enter a Pastebin code or Pastebin URL.
-- The downloaded Lua is syntax-checked before installation.
-- The installer stores third-party apps in `/pacificos/userapps/`.
-- Installed apps are registered in `/pacificos/data/apps.cfg`.
-- Every new app is automatically added to the PacificOS desktop.
-- The installer can launch, hide/show a desktop shortcut, and uninstall apps.
-- A failed third-party application is isolated with `pcall` so its error returns to the desktop instead of crashing the whole launcher.
+- **WGET** — direct HTTP/HTTPS Lua URL
+- **PASTEBIN** — Pastebin code or raw URL
+- Lua syntax validation before installation
+- Launching apps which return `run()` or normal Lua programs
+- Desktop shortcut hide/show
+- Uninstall
 
-An installed application should either return a table containing `run()` or behave as a normal CC:Tweaked Lua program.
+Third-party applications are arbitrary Lua code. Install only applications you trust.
 
-## Built-in features
+## Recovery
 
-- Guarded boot screen and recovery
-- Adaptive desktop for normal computers, advanced computers and monitor touch
-- Reliable desktop pagination
-- Settings and local configuration
-- File Manager with create, rename, copy, move and delete
-- Calculator with trigonometry, powers, factorial, gcd/lcm and more
-- Clock and calendar
-- Network and device tools
-- Text editor and terminal
-- Task Manager diagnostics
-- Working system updater
-- Antivirus UI
-- System information
-- Factory reset and recovery
+Recovery includes:
 
-PacificOS does **not** use Lua `require()`. Its internal modules use CC:Tweaked-compatible file loading.
+- Normal startup
+- **Safe Mode**, which disables third-party desktop applications
+- System diagnostics
+- Factory Reset
+- Reinstall from the official GitHub installer
+- Shutdown
 
-## Important limitation
+Factory Reset removes local settings, logs, installed third-party applications, app registry data and temporary installer/update files while keeping the PacificOS system, boot and recovery files.
 
-CC:Tweaked does not provide true protected processes or native memory isolation for Lua applications. PacificOS therefore uses guarded cooperative application sessions rather than claiming full process isolation.
+## Architecture
 
-## Repository
+PacificOS does **not** use Lua `require()`. Internal components use CC:Tweaked-compatible file loading.
 
-https://github.com/Frez7373/PacificOS
+Applications run in guarded cooperative sessions. PacificOS catches application failures and returns to the desktop instead of claiming unsupported process or memory isolation.
+
+## Credits
+
+**Complex Computer International (CCI) — 2026**
+
+Repository: https://github.com/Frez7373/PacificOS
