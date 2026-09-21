@@ -84,6 +84,7 @@ function M.run()
       U.button(2, 7 + (i - 1) * 3, math.min(30, w - 3), 2, item, bg)
     end
 
+    U.backButton(h - 2)
     U.status("Up/Down = select | Enter = run | Q/Esc = back")
 
     local e, a, b, c = os.pullEvent()
@@ -97,6 +98,7 @@ function M.run()
         else return end
       end
     elseif e == "mouse_click" or e == "monitor_touch" then
+      if U.backHit(b, c, h - 2, 18) then return end
       for i = 1, #items do
         local by = 7 + (i - 1) * 3
         if U.hit(2, by, math.min(30, w - 3), 2, b, c) then
