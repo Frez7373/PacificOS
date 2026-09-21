@@ -87,7 +87,7 @@ function M.run(targetPath)
       end
     end
 
-    local toolbarY = h - 3
+    local toolbarY = h - 4
     if w >= 45 then
       U.button(2, toolbarY, 8, 1, "ADD", U._accent)
       U.button(11, toolbarY, 8, 1, "EDIT", U._accent2)
@@ -102,6 +102,7 @@ function M.run(targetPath)
       if w >= 36 then U.button(34, toolbarY, math.min(7, w - 33), 1, "BACK", U._accent2) end
     end
 
+    if w < 45 then U.backButton(h - 2) end
     U.status((notice or "") .. " | Up/Down select | Q/Esc back")
 
     local function action(name)
@@ -162,6 +163,7 @@ function M.run(targetPath)
         if r == "back" then return end
       end
     elseif e == "mouse_click" or e == "monitor_touch" then
+      if U.backHit(b, c, h - 2, 18) then return end
       local y = c
       local visible = math.max(1, h - 9)
       if #lines > 0 and y >= 5 and y < 5 + visible then
