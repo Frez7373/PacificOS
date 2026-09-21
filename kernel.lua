@@ -41,7 +41,10 @@ end
 local function layout()
   local w,h=term.getSize()
   local cols=w>=80 and 4 or (w>=55 and 3 or (w>=38 and 2 or 1))
-  local rows=math.max(1,math.floor((h-10)/3))
+  -- Reserve five rows at the bottom:
+  -- one for status, one for navigation buttons, one for the page label,
+  -- plus two rows of safety space so shortcuts never overlap the footer.
+  local rows=math.max(1,math.floor((h-12)/3))
   return cols*rows,cols,rows
 end
 
