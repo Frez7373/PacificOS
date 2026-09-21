@@ -94,7 +94,7 @@ function BIOS.run()
     row(4, "CCI BIOS 1.9.0", T.accent)
     row(5, "Arrow keys + Enter or touchscreen", T.muted)
 
-    local startY = 7
+    local startY = 6
     for i, item in ipairs(items) do
       local y = startY + i - 1
       row(y, (i == selected and "> " or "  ") .. item,
