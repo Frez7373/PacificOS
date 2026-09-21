@@ -1,14 +1,80 @@
-local W=dofile('/pacificos/ui/widgets.lua')
-local M={windows={},active=nil,next=0}
-function M.add(title,draw,click)
- M.next=M.next+1; local id=M.next; M.windows[#M.windows+1]={id=id,title=title,draw=draw,click=click,x=2+(id-1)%3*4,y=3+(id-1)%2*2,w=math.max(20,select(1,term.getSize())-8),h=math.max(8,select(2,term.getSize())-6),min=false}; M.active=id; return id
+local U = dofile("/pacificos/ui/widgets.lua")
+local M = {
+  windows = {},
+  active = nil,
+  next = 0
+}
+
+local function normalizeWindow(v)
+  local w, h = term.getSize()
+  v.x = math.max(1, math.min(v.x or 2, math.max(1, w - 8)))
+  v.y = math.max(3, math.min(v.y or 3, math.max(3, h - 6)))
+  v.w = math.max(14, math.min(v.w or w - 8, w - v.x + 1))
+  v.h = math.max(5, math.min(v.h or h - 6, h - v.y + 1))
+  return v
 end
-function M.close(id) for i,v in ipairs(M.windows) do if v.id==id then table.remove(M.windows,i); break end end; M.active=M.windows[#M.windows] and M.windows[#M.windows].id end
-function M.draw() for _,v in ipairs(M.windows) do if not v.min and v.draw then pcall(v.draw,v) end end end
-function M.event(e,a,b,c)
- if e=='mouse_click' or e=='monitor_touch' then
-  for i=#M.windows,1,-1 do local v=M.windows[i]; if not v.min and a and b>=v.x and b<v.x+v.w and c>=v.y and c<v.y+v.h then M.active=v.id; if v.click then pcall(v.click,v,a,b,c) end; return true end end
- end
- return false
+
+function M.add(title, draw, click)
+  M.next = M.next + 1
+  local id = M.next
+  local w, h = term.getSize()
+
+  local win = {
+    id = id,
+    title = tostring(title or "Window"),
+    draw = draw,
+    click = click,
+    x = 2 + ((id - 1) % 3) * 4,
+    y = 3 + ((id - 1) % 2) * 2,
+    w = math.max(20, w - 8),
+    h = math.max(8, h - 6),
+    min = false
+  }
+
+  M.windows[#M.windows + 1] = normalizeWindow(win)
+  M.active = id
+  return id
 end
+
+function M.close(id)
+  for i, win in ipairs(M.windows) do
+    if win.id == id then table.remove(M.windows, i) break end
+  end
+  M.active = M.windows[#M.windows] and M.windows[#M.windows].id or nil
+end
+
+function M.minimize(id)
+  for _, win in ipairs(M.windows) do
+    if win.id == id then win.min = true return end
+  end
+end
+
+function M.restore(id)
+  for _, win in ipairs(M.windows) do
+    if win.id == id then win.min = false; M.active = id; return end
+  end
+end
+
+function M.draw()
+  for _, win in ipairs(M.windows) do
+    if not win.min and type(win.draw) == "function" then
+      pcall(win.draw, win)
+    end
+  end
+end
+
+function M.event(event, a, b, c)
+  if event ~= "mouse_click" and event ~= "monitor_touch" then return false end
+
+  for i = #M.windows, 1, -1 do
+    local win = M.windows[i]
+    if not win.min and b >= win.x and b < win.x + win.w and c >= win.y and c < win.y + win.h then
+      M.active = win.id
+      if type(win.click) == "function" then pcall(win.click, win, a, b, c) end
+      return true
+    end
+  end
+  return false
+end
+
 return M
