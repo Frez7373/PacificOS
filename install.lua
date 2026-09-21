@@ -1,9 +1,9 @@
--- PacificOS 1.8.0 installer
+-- PacificOS 1.8.1 installer
 local BASE = "https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT = "/pacificos"
 local STAGE = ROOT .. "/.installer_stage"
 local BACKUP = ROOT .. "/.installer_backup"
-local VERSION = "1.8.0"
+local VERSION = "1.8.1"
 
 local files = {
   "startup.lua","boot.lua","bios.lua","kernel.lua","manifest.lua",
