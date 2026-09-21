@@ -30,32 +30,23 @@ local builtins = {
 local function getApps()
   local result = {}
   for _, app in ipairs(builtins) do
-    result[#result + 1] = {name = app[1], path = app[2], builtin = true}
+    result[#result + 1] = {name=app[1], path=app[2], builtin=true}
   end
-  for _, app in ipairs(ThirdParty.listDesktop()) do
-    result[#result + 1] = {
-      name = app.name,
-      path = app.path,
-      builtin = false,
-      external = true
-    }
+
+  if not _G.PACIFICOS_SAFE_MODE then
+    for _, app in ipairs(ThirdParty.listDesktop()) do
+      result[#result + 1] = {
+        name=app.name, path=app.path, builtin=false, external=true
+      }
+    end
   end
+
   return result
 end
 
 local function layout()
   local w, h = term.getSize()
-  local columns
-  if w >= 76 then
-    columns = 4
-  elseif w >= 50 then
-    columns = 3
-  elseif w >= 31 then
-    columns = 2
-  else
-    columns = 1
-  end
-
+  local columns = w >= 76 and 4 or (w >= 50 and 3 or (w >= 31 and 2 or 1))
   local rows = math.max(1, math.floor((h - 7) / 3))
   return columns * rows, columns, rows
 end
@@ -63,6 +54,23 @@ end
 local function pageCount(apps)
   local perPage = layout()
   return math.max(1, math.ceil(#apps / perPage))
+end
+
+local function showAppError(app, err)
+  local w, h = term.getSize()
+  U.clear(T.bg)
+  U.header("Application Error", true)
+  U.label(2, 4, "The application stopped safely.", T.bad)
+  U.label(2, 6, "App: " .. tostring(app.name), T.text)
+  U.label(2, 7, "Path: " .. tostring(app.path), T.muted)
+  U.label(2, 9, tostring(err), T.bad, math.max(1, w - 3))
+  U.backButton(math.min(12, h - 2))
+  U.status("Enter / Back = return")
+  while true do
+    local e, a, b, c = os.pullEvent()
+    if e == "key" and (a == keys.enter or a == keys.q or a == keys.escape or a == keys.backspace) then return end
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, math.min(12, h - 2), 18) then return end
+  end
 end
 
 local function runApp(app)
@@ -76,44 +84,32 @@ local function runApp(app)
     ok, result = pcall(result)
   end
 
-  if not ok then
-    U.clear(T.bg)
-    U.header("Application Error")
-    U.label(2, 4, "The application stopped safely.", T.bad)
-    U.label(2, 6, "App: " .. tostring(app.name), T.text)
-    U.label(2, 7, "Path: " .. tostring(app.path), T.muted)
-    U.label(2, 9, tostring(result), T.bad)
-    U.backButton(12)
-    U.status("Press Enter or Back to return")
-    while true do
-      local e, a, b, c = os.pullEvent()
-      if e == "key" and (a == keys.enter or a == keys.q or a == keys.escape or a == keys.backspace) then
-        return
-      elseif (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, 12, 18) then
-        return
-      end
-    end
-  end
+  if not ok then showAppError(app, result) end
 end
 
 local function drawDesktop()
   local apps = getApps()
   local w, h = term.getSize()
-  local perPage, columns, rows = layout()
+  local perPage, columns = layout()
   local pages = pageCount(apps)
   kernelPage = math.max(1, math.min(kernelPage or 1, pages))
 
   U.clear(T.bg)
   U.fill(1, 1, w, 2, T.dark, T.textOnBlue)
   U.label(2, 1, "PACIFICOS", T.textOnBlue)
-  local hostname = tostring(C.get("hostname") or "pacificos")
-  U.label(2, 2, U._muted and hostname or hostname, T.text)
+  U.label(2, 2, tostring(C.get("hostname") or "pacificos"), T.text)
+
   local clock = textutils.formatTime(os.time(), C.get("show_seconds") == true)
   local right = clock .. "  ID " .. tostring(os.getComputerID())
   U.label(math.max(1, w - #right + 1), 1, right, T.textOnBlue)
 
-  local thirdCount = #ThirdParty.list()
-  local badge = thirdCount > 0 and ("CCI 2026 | " .. thirdCount .. " apps") or "CCI 2026"
+  local badge
+  if _G.PACIFICOS_SAFE_MODE then
+    badge = "SAFE MODE"
+  else
+    local count = #ThirdParty.list()
+    badge = count > 0 and ("CCI 2026 | " .. count .. " apps") or "CCI 2026"
+  end
   U.label(math.max(1, w - #badge + 1), 2, badge, T.text)
 
   local gap = 2
@@ -123,13 +119,13 @@ local function drawDesktop()
   for offset = 0, perPage - 1 do
     local app = apps[first + offset]
     if not app then break end
-
     local col = offset % columns
     local row = math.floor(offset / columns)
     local x = 3 + col * (bw + gap)
     local y = 4 + row * 3
-    local bg = app.external and T.card2 or T.card
-    U.button(x, y, bw, 2, app.name, bg, app.external and T.textOnBlue or T.text)
+    U.button(x, y, bw, 2, app.name,
+      app.external and T.card2 or T.card,
+      app.external and T.textOnBlue or T.text)
   end
 
   local buttonY = math.max(4, h - 3)
@@ -141,14 +137,13 @@ local function drawDesktop()
     U.button(w - 11, buttonY, 10, 1, "POWER", T.card)
   elseif w >= 25 then
     U.button(2, buttonY, 5, 1, "<", kernelPage > 1 and T.card or T.panel)
-    U.button(math.max(8, math.floor((w - 7) / 2)), buttonY, 7, 1, "NEXT", kernelPage < pages and T.card or T.panel)
+    U.button(8, buttonY, 7, 1, "NEXT", kernelPage < pages and T.card or T.panel)
     U.button(w - 6, buttonY, 5, 1, "OFF", T.card)
   end
 
   U.center(pageY, "Page " .. kernelPage .. "/" .. pages, T.muted)
-
   local net = N.status()
-  local networkState = (net.opened > 0) and "ONLINE" or (#net.modems > 0 and "READY" or "NO MODEM")
+  local networkState = net.opened > 0 and "ONLINE" or (#net.modems > 0 and "READY" or "NO MODEM")
   U.status("Network " .. networkState .. " | Devices " .. tostring(#D.list()) .. " | Left/Right = pages")
 end
 
@@ -169,19 +164,16 @@ local function hitApp(x, y)
       local row = math.floor(offset / columns)
       local bx = 3 + col * (bw + gap)
       local by = 4 + row * 3
-      if U.hit(bx, by, bw, 2, x, y) then
-        return app
-      end
+      if U.hit(bx, by, bw, 2, x, y) then return app end
     end
   end
+
   return nil
 end
 
 local function handleNavigation(x, y)
-  local _, h = term.getSize()
-  local w = select(1, term.getSize())
+  local w, h = term.getSize()
   local buttonY = math.max(4, h - 3)
-
   if y < buttonY or y >= buttonY + 1 then return false end
 
   if w >= 42 then
@@ -191,7 +183,7 @@ local function handleNavigation(x, y)
     elseif x >= 14 and x < 26 then
       kernelPage = math.min(pageCount(getApps()), kernelPage + 1)
       return true
-    elseif x >= w - 11 and x <= w then
+    elseif x >= w - 11 then
       os.shutdown()
       return true
     end
@@ -212,6 +204,7 @@ local function handleNavigation(x, y)
 end
 
 local kernelPage = 1
+
 while true do
   drawDesktop()
   local e, a, b, c = os.pullEvent()
@@ -230,6 +223,10 @@ while true do
       kernelPage = math.min(pages, kernelPage + 1)
     elseif a == keys.f12 then
       os.shutdown()
+    elseif a == keys.home then
+      kernelPage = 1
+    elseif a == keys.end then
+      kernelPage = pages
     end
   elseif e == "term_resize" then
     kernelPage = 1
