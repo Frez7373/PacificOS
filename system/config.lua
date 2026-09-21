@@ -1,22 +1,80 @@
-local path='/pacificos/config.cfg'
+local ROOT = "/pacificos"
+local PATH = ROOT .. "/config.cfg"
+
 local function defaults()
- return {version='1.7.4',theme='ocean',hostname='pacificos',autostart=true,network=true,animations=true,sounds=true,notifications=true,show_seconds=false,boot_delay=0.3,default_app='Files'}
+  return {
+    version = "1.8.0",
+    theme = "pacific-blue",
+    hostname = "pacificos",
+    autostart = true,
+    network = true,
+    animations = true,
+    sounds = true,
+    notifications = true,
+    show_seconds = false,
+    boot_delay = 0.2,
+    default_app = "Files"
+  }
 end
-local data=defaults()
-local M={}
+
+local data = defaults()
+local M = {}
+
+local function ensureRoot()
+  if not fs.exists(ROOT) then fs.makeDir(ROOT) end
+end
+
 local function load()
- if not fs.exists(path) then return end
- local h=fs.open(path,'r'); if not h then return end
- local s=h.readAll(); h.close()
- local ok,t=pcall(textutils.unserialize,s)
- if ok and type(t)=='table' then for k,v in pairs(t) do data[k]=v end end
+  ensureRoot()
+  if not fs.exists(PATH) then return end
+  local handle = fs.open(PATH, "r")
+  if not handle then return end
+
+  local raw = handle.readAll() or ""
+  handle.close()
+
+  local ok, loaded = pcall(textutils.unserialize, raw)
+  if ok and type(loaded) == "table" then
+    for key, value in pairs(loaded) do
+      data[key] = value
+    end
+  end
+
+  data.version = "1.8.0"
+  if type(data.hostname) ~= "string" or data.hostname == "" then data.hostname = "pacificos" end
 end
+
 local function save()
- local h=fs.open(path,'w'); if h then h.write(textutils.serialize(data)); h.close() end
+  ensureRoot()
+  local handle = fs.open(PATH, "w")
+  if not handle then return false end
+  handle.write(textutils.serialize(data))
+  handle.close()
+  return true
 end
+
 load()
-function M.get(k) return data[k] end
-function M.set(k,v) data[k]=v; save() end
-function M.all() local t={}; for k,v in pairs(data) do t[k]=v end; return t end
-function M.reset() data=defaults(); save() end
+
+function M.get(key)
+  return data[key]
+end
+
+function M.set(key, value)
+  data[key] = value
+  return save()
+end
+
+function M.all()
+  local result = {}
+  for key, value in pairs(data) do
+    result[key] = value
+  end
+  return result
+end
+
+function M.reset()
+  data = defaults()
+  return save()
+end
+
 return M
