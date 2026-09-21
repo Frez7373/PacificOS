@@ -1,49 +1,71 @@
-local U=dofile("/pacificos/ui/widgets.lua")
-local Up=dofile("/pacificos/system/updater.lua")
-local M={}
+local U = dofile("/pacificos/ui/widgets.lua")
+local Up = dofile("/pacificos/system/updater.lua")
+local M = {}
+
+local function showMessage(title, message, color)
+  local w, h = term.getSize()
+  U.clear()
+  U.header(title, true)
+  U.label(2, 5, message, color or U._text, math.max(1, w - 3))
+  U.status("Press any key to return")
+  os.pullEvent()
+end
 
 function M.run()
   while true do
-    local w,h=term.getSize()
-    U.clear(); U.header("System Updater")
-    U.label(2,3,"PacificOS updates keep user-installed apps intact.",U._muted)
+    local w, h = term.getSize()
+    U.clear()
+    U.header("System Updater", true)
+    U.label(2, 4, "Checks the official PacificOS GitHub manifest.", U._muted)
 
-    local info,e=Up.compare()
+    local info, err = Up.compare()
     if not info then
-      U.label(2,6,"Check failed: "..tostring(e),colors.red)
+      U.label(2, 7, "Update check failed:", U._bad)
+      U.label(2, 8, tostring(err), U._bad, math.max(1, w - 3))
+      U.label(2, 10, "Check HTTP access and try again.", U._muted)
+      U.backButton(h - 2)
+      U.status("Q/Esc/Backspace = back")
     else
-      U.label(2,5,"Installed: "..tostring(info.localVersion),U._text)
-      U.label(2,7,"Available: "..tostring(info.remoteVersion),U._text)
-      U.label(2,9,info.update and "Update available." or "PacificOS is up to date.",info.update and colors.yellow or colors.lime)
-      U.button(2,11,24,2,info.update and "Install Update" or "Check Again",colors.blue)
+      U.label(2, 6, "Installed: " .. tostring(info.localVersion), U._text)
+      U.label(2, 7, "Available: " .. tostring(info.remoteVersion), U._accent)
+
+      if info.update then
+        U.label(2, 9, "A newer PacificOS release is available.", U._warn)
+        U.button(2, 11, math.min(28, w - 3), 2, "INSTALL UPDATE", U._accent)
+      elseif info.remoteAheadOrDifferent then
+        U.label(2, 9, "Versions differ, but the remote version is not newer.", U._muted)
+      else
+        U.label(2, 9, "PacificOS is up to date.", U._accent)
+      end
+
+      U.backButton(h - 2)
+      U.status("Enter = install when available | Q/Esc/Backspace = back")
     end
 
-    U.button(2,h-3,24,2,"Back",colors.gray)
-    U.status("Q / Esc / Backspace = back")
-
-    local ev,a,b,c=os.pullEvent()
-    if ev=="key" and (a==keys.q or a==keys.escape or a==keys.backspace) then
+    local e, a, b, c = os.pullEvent()
+    if U.closeEvent(e, a) then return end
+    if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
       return
-    elseif ev=="mouse_click" or ev=="monitor_touch" then
-      if c>=h-3 and c<h-1 and b>=2 and b<26 then return end
-      if c>=11 and c<13 and b>=2 and b<26 and info and info.update then
-        U.clear(); U.header("System Updater"); U.label(2,5,"Installing update...",U._accent)
-        local ok,err,count=Up.update(info.manifest)
+    end
+
+    if info and info.update then
+      local requested = e == "key" and a == keys.enter
+      requested = requested or ((e == "mouse_click" or e == "monitor_touch") and U.hit(2, 11, math.min(28, w - 3), 2, b, c))
+      if requested then
+        U.clear()
+        U.header("System Updater")
+        U.label(2, 5, "Downloading and staging the update...", U._accent)
+        local ok, updateErr, count = Up.update(info.manifest)
         if ok then
-          U.label(2,7,"Updated "..tostring(count).." files.",colors.lime)
-          U.label(2,9,"Rebooting into the new version...",colors.lime)
+          U.label(2, 7, "Updated " .. tostring(count or 0) .. " files.", U._accent)
+          U.label(2, 8, "User apps and user data were preserved.", U._text)
+          U.label(2, 10, "Rebooting...", U._muted)
           os.sleep(1)
           os.reboot()
           return
         else
-          U.label(2,7,"Update failed:",colors.red)
-          U.label(2,8,tostring(err),colors.red)
-          U.label(2,10,"Updated before failure: "..tostring(count or 0),colors.yellow)
-          U.status("Press any key to return")
-          os.pullEvent()
+          showMessage("Update Failed", tostring(updateErr) .. " | Applied: " .. tostring(count or 0), U._bad)
         end
-      elseif c>=11 and c<13 and b>=2 and b<26 and info and not info.update then
-        -- refresh on next loop
       end
     end
   end
