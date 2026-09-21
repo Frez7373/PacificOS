@@ -12,51 +12,55 @@ local PROTECTED = {
   ["/pacificos/recovery"] = true
 }
 
+local function isPrefix(path, prefix)
+  return path == prefix or path:sub(1, #prefix + 1) == prefix .. "/"
+end
+
 function M.isProtected(path)
   if type(path) ~= "string" then return true end
   path = fs.combine("/", path)
   if PROTECTED[path] then return true end
-  if path:sub(1, 15) == "/pacificos/system" then return true end
-  if path:sub(1, 9) == "/pacificos/ui" then return true end
-  if path:sub(1, 19) == "/pacificos/recovery" then return true end
-  if path == "/pacificos/boot.lua" or path == "/pacificos/bios.lua" or path == "/pacificos/kernel.lua" then return true end
+
+  if isPrefix(path, "/pacificos/system") then return true end
+  if isPrefix(path, "/pacificos/ui") then return true end
+  if isPrefix(path, "/pacificos/recovery") then return true end
   return false
 end
 
 function M.stats(path)
   path = path or "/pacificos"
-  local fileCount, dirCount, used = 0, 0, 0
+  local files, directories, bytes = 0, 0, 0
 
   local function scan(current)
     if fs.isDir(current) then
-      dirCount = dirCount + 1
+      directories = directories + 1
       for _, name in ipairs(fs.list(current)) do
         scan(fs.combine(current, name))
       end
+      return
+    end
+
+    files = files + 1
+    local size
+    local ok = pcall(function() size = fs.getSize(current) end)
+    if ok and type(size) == "number" then
+      bytes = bytes + size
     else
-      fileCount = fileCount + 1
-      local size
-      local ok = pcall(function() size = fs.getSize(current) end)
-      if ok and type(size) == "number" then
-        used = used + size
-      else
-        local handle = fs.open(current, "r")
-        if handle then
-          used = used + #(handle.readAll() or "")
-          handle.close()
-        end
+      local handle = fs.open(current, "r")
+      if handle then
+        bytes = bytes + #(handle.readAll() or "")
+        handle.close()
       end
     end
   end
 
-  scan(path)
-  return {files = fileCount, directories = dirCount, bytes = used}
+  if fs.exists(path) then scan(path) end
+  return {files = files, directories = directories, bytes = bytes}
 end
 
 function M.safeDelete(path)
   if M.isProtected(path) then return false, "protected system path" end
   if not fs.exists(path) then return false, "not found" end
-  if fs.isReadOnly(path) then return false, "read-only" end
   local ok, err = pcall(fs.delete, path)
   return ok, ok and nil or err
 end
@@ -70,16 +74,11 @@ function M.read(path)
   return data
 end
 
-local function makeParent(path)
-  local dir = fs.getDir(path)
-  if dir ~= "" and not fs.exists(dir) then
-    fs.makeDir(dir)
-  end
-end
-
 function M.write(path, data)
   if M.isProtected(path) then return false, "protected system path" end
-  makeParent(path)
+  local dir = fs.getDir(path)
+  if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
+
   local handle, err = fs.open(path, "w")
   if not handle then return false, err or "cannot open" end
   handle.write(tostring(data or ""))
