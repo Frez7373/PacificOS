@@ -3,18 +3,24 @@ local ROOT = "/pacificos"
 local T = dofile(ROOT .. "/ui/theme.lua")
 local C = dofile(ROOT .. "/system/config.lua")
 
+-- Boot must remain independent from optional theme values.
+local BOOT_BLUE = (colors and colors.blue) or (colours and colours.blue) or 8
+local BOOT_WHITE = (colors and colors.white) or (colours and colours.white) or 1
+local BOOT_BLACK = (colors and colors.black) or (colours and colours.black) or 32768
+local BOOT_GRAY = (colors and colors.gray) or (colours and colours.gray) or 128
+
 local function showError(title, message)
-  term.setBackgroundColor(T.bg)
-  term.setTextColor(T.text)
+  term.setBackgroundColor(BOOT_WHITE)
+  term.setTextColor(BOOT_BLACK)
   term.clear()
   term.setCursorPos(2, 2)
   term.setTextColor(T.bad)
   print(title)
-  term.setTextColor(T.text)
+  term.setTextColor(BOOT_BLACK)
   print("")
   print(tostring(message))
   print("")
-  term.setTextColor(T.text)
+  term.setTextColor(BOOT_BLACK)
   print("[R] Recovery    [Q] Shutdown")
 
   while true do
@@ -43,29 +49,29 @@ end
 
 local function waitForBIOS()
   local w, h = term.getSize()
-  term.setBackgroundColor(T.bg)
+  term.setBackgroundColor(BOOT_WHITE)
   term.setTextColor(T.text)
   term.clear()
 
-  term.setBackgroundColor(T.dark)
-  term.setTextColor(T.textOnBlue)
+  term.setBackgroundColor(BOOT_BLUE)
+  term.setTextColor(BOOT_WHITE)
   term.setCursorPos(1, 1)
   write(string.rep(" ", w))
   term.setCursorPos(2, 1)
   write("PACIFICOS 1.8.1")
 
-  term.setBackgroundColor(T.bg)
+  term.setBackgroundColor(BOOT_WHITE)
   term.setTextColor(T.text)
   term.setCursorPos(2, 4)
   write("Press ] quickly to enter BIOS")
   term.setCursorPos(2, 5)
   write("BIOS window: 1.5 seconds")
   term.setCursorPos(2, 7)
-  term.setTextColor(T.muted)
+  term.setTextColor(BOOT_GRAY)
   write("Complex Computer International (CCI) 2026")
 
   term.setCursorPos(2, math.max(1, h - 1))
-  term.setTextColor(T.muted)
+  term.setTextColor(BOOT_GRAY)
   write("Starting PacificOS...")
 
   local timer = os.startTimer(1.5)
@@ -142,7 +148,7 @@ for i, step in ipairs(steps) do
   term.setTextColor(T.text)
   write(step:sub(1, math.max(1, w - 12)))
 
-  term.setTextColor(T.accent)
+  term.setTextColor(BOOT_BLUE)
   term.setCursorPos(math.max(1, w - 6), math.min(h - 2, centerY + 9))
   write(string.format("%3d%%", percent))
 
