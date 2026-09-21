@@ -31,7 +31,9 @@ function M.run()
 
       if info.update then
         U.label(2, 9, "A newer PacificOS release is available.", U._warn)
-        U.button(2, 11, math.min(28, w - 3), 2, "INSTALL UPDATE", U._accent)
+        local updateY = h >= 15 and 11 or 9
+        local updateW = math.max(8, math.min(24, w - 12))
+        U.button(2, updateY, updateW, 1, "INSTALL UPDATE", U._accent)
       elseif info.remoteAheadOrDifferent then
         U.label(2, 9, "Versions differ, but the remote version is not newer.", U._muted)
       else
@@ -50,7 +52,7 @@ function M.run()
 
     if info and info.update then
       local requested = e == "key" and a == keys.enter
-      requested = requested or ((e == "mouse_click" or e == "monitor_touch") and U.hit(2, 11, math.min(28, w - 3), 2, b, c))
+      requested = requested or ((e == "mouse_click" or e == "monitor_touch") and U.hit(2, (h >= 15 and 11 or 9), math.max(8, math.min(24, w - 12)), 1, b, c))
       if requested then
         U.clear()
         U.header("System Updater")
