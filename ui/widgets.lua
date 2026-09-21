@@ -1,6 +1,7 @@
 local T = dofile("/pacificos/ui/theme.lua")
 local W = {}
 
+-- Public palette aliases used by the built-in applications.
 W._accent = T.accent
 W._muted = T.muted
 W._text = T.text
@@ -25,6 +26,23 @@ local function fit(value, width)
     return value:sub(1, width - 3) .. "..."
   end
   return value .. string.rep(" ", width - #value)
+end
+
+local function normalizeButtonColors(bg, fg)
+  bg = bg or T.card
+  fg = fg or T.text
+
+  -- Map old PacificOS colour aliases to the classic Windows palette.
+  if bg == T.card2 then
+    bg = T.panel
+  elseif bg == T.accent or bg == T.dark then
+    bg = T.dark
+    if fg == T.text then fg = T.textOnBlue end
+  elseif bg == T.accent2 then
+    bg = T.face
+  end
+
+  return bg, fg
 end
 
 function W.clamp(value, low, high)
@@ -84,6 +102,7 @@ function W.center(y, value, fg)
 end
 
 function W.button(x, y, width, height, label, bg, fg)
+  -- Keep compatibility with the original 5/6 argument button calls.
   if type(height) ~= "number" then
     local oldLabel = height
     local oldBg = label
@@ -104,10 +123,25 @@ function W.button(x, y, width, height, label, bg, fg)
   width = math.min(width, screenW - x + 1)
   height = math.min(height, screenH - y + 1)
   label = tostring(label or "")
-  bg = bg or T.card
-  fg = fg or ((bg == T.dark or bg == T.accent) and T.textOnBlue or T.text)
+  bg, fg = normalizeButtonColors(bg, fg)
 
+  -- Windows 98 style: quiet grey face, black text, blue only for
+  -- selected/primary controls.  Two-row buttons get a subtle lower shadow.
   W.fill(x, y, width, height, bg, fg)
+
+  if height >= 2 and width >= 3 and bg == T.face then
+    term.setBackgroundColor(T.highlight)
+    term.setCursorPos(x, y)
+    write(string.rep(" ", width))
+    term.setBackgroundColor(T.shadow)
+    term.setCursorPos(x, y + height - 1)
+    write(string.rep(" ", width))
+    if height == 2 then
+      term.setBackgroundColor(T.face)
+      term.setCursorPos(x, y)
+      write(" ")
+    end
+  end
 
   local shown = label
   if #shown > width then
@@ -117,6 +151,7 @@ function W.button(x, y, width, height, label, bg, fg)
 
   local tx = x + math.max(0, math.floor((width - #shown) / 2))
   local ty = y + math.floor((height - 1) / 2)
+
   term.setBackgroundColor(bg)
   term.setTextColor(fg)
   term.setCursorPos(tx, ty)
@@ -124,24 +159,24 @@ function W.button(x, y, width, height, label, bg, fg)
 end
 
 function W.header(title, back)
-  local screenW = select(1, term.getSize())
-  W.fill(1, 1, screenW, 2, T.dark, T.textOnBlue)
+  local screenW, screenH = term.getSize()
 
+  -- Classic application title bar + grey menu strip.
+  W.fill(1, 1, screenW, 1, T.dark, T.textOnBlue)
   term.setTextColor(T.textOnBlue)
   term.setCursorPos(2, 1)
-  write(fit("PACIFICOS", math.min(14, screenW - 2)))
+  write(fit("PACIFICOS - " .. tostring(title or ""), math.max(1, screenW - 12)))
 
-  term.setBackgroundColor(T.panel)
-  term.setTextColor(T.text)
-  term.setCursorPos(2, 2)
-  write(fit(tostring(title or ""), screenW - 2))
-
-  if back and screenW >= 12 then
+  if back and screenW >= 8 then
     term.setBackgroundColor(T.dark)
     term.setTextColor(T.textOnBlue)
-    term.setCursorPos(math.max(1, screenW - 9), 1)
-    write("< BACK")
+    term.setCursorPos(math.max(1, screenW - 5), 1)
+    write("[X]")
   end
+
+  W.fill(1, 2, screenW, 1, T.panel, T.text)
+  term.setCursorPos(2, 2)
+  write(fit(tostring(title or ""), math.max(1, screenW - 2)))
 end
 
 function W.top(title)
@@ -150,8 +185,8 @@ end
 
 function W.bottom(value)
   local screenW, screenH = term.getSize()
-  term.setBackgroundColor(T.dark)
-  term.setTextColor(T.textOnBlue)
+  term.setBackgroundColor(T.panel)
+  term.setTextColor(T.text)
   term.setCursorPos(1, screenH)
   write(fit(value or "", screenW))
 end
@@ -164,7 +199,7 @@ function W.backButton(y)
   local screenW, screenH = term.getSize()
   local buttonY = math.min(tonumber(y) or screenH - 2, screenH - 1)
   local width = math.max(8, math.min(18, screenW - 2))
-  if buttonY >= 2 then W.button(2, buttonY, width, 1, "BACK", T.accent2) end
+  if buttonY >= 2 then W.button(2, buttonY, width, 1, "BACK", T.face, T.text) end
 end
 
 function W.backHit(x, y, buttonY, width)
