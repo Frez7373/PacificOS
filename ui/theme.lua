@@ -16,7 +16,7 @@ return {
   good = C.green,
   warn = C.yellow,
   bad = C.red,
-  dark = C.darkBlue,
+  dark = C.blue,
   border = C.gray,
 
   white = C.white,
