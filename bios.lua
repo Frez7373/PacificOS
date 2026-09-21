@@ -27,9 +27,11 @@ local function clear()
   term.setCursorPos(1,1)
 end
 
-local function line(text,color)
+local function drawText(y,text,colorValue)
   local w=select(1,term.getSize())
-  term.setTextColor(color or colors.white)
+  y=math.max(1,math.floor(tonumber(y) or 1))
+  term.setCursorPos(1,y)
+  term.setTextColor(colorValue or colors.white)
   write(string.sub(tostring(text or ''),1,math.max(1,w)))
 end
 
@@ -40,86 +42,97 @@ local function header(title)
   term.setCursorPos(1,1)
   write(string.rep(' ',w))
   term.setCursorPos(2,1)
-  write('PACIFICOS BIOS')
-  if title and title~='' then
-    local x=math.max(20,w-#title-1)
+  write(string.sub('PACIFICOS BIOS',1,math.max(1,w-1)))
+
+  if title and title~='' and w>20 then
+    local x=math.min(w-#title,20)
+    x=math.max(2,x)
     term.setCursorPos(x,1)
-    write(string.sub(title,1,w-x+1))
+    write(string.sub(title,1,math.max(1,w-x+1)))
   end
+
   term.setBackgroundColor(colors.black)
 end
 
-local function waitAny()
+local function backScreen()
+  drawText(select(2,term.getSize()),'[B] Back   [Enter]/[Esc] Back',colors.lightGray)
   while true do
-    local e=os.pullEvent()
-    if e=='key' or e=='mouse_click' or e=='monitor_touch' then return end
+    local e,a=os.pullEvent()
+    if e=='key' and (a==keys.b or a==keys.enter or a==keys.escape or a==keys.backspace) then
+      return
+    elseif e=='mouse_click' or e=='monitor_touch' then
+      return
+    end
   end
 end
 
 local function hardwareScreen()
   clear()
-  header('Hardware Information')
+  header('Hardware')
 
   local p=BIOS.hardware()
-  local y=3
-  line('Computer ID: '..tostring(p.id),colors.white); y=y+1
-  line('Computer Label: '..tostring(p.label or 'none'),colors.white); y=y+1
-  line('Terminal: '..tostring(p.w)..'x'..tostring(p.h)..'  Color: '..(p.color and 'YES' or 'NO'),colors.white); y=y+2
+  drawText(3,'Computer ID: '..tostring(p.id))
+  drawText(4,'Computer Label: '..tostring(p.label or 'none'))
+  drawText(5,'Terminal: '..tostring(p.w)..'x'..tostring(p.h)..'  Color: '..(p.color and 'YES' or 'NO'))
+  drawText(7,'Detected peripherals:',colors.cyan)
 
-  line('Detected peripherals:',colors.cyan); y=y+1
   local names={}
-  for name,_ in pairs(p.peripherals) do names[#names+1]=name end
+  for name,_ in pairs(p.peripherals) do
+    names[#names+1]=name
+  end
   table.sort(names)
 
+  local _,h=term.getSize()
   if #names==0 then
-    line('  none',colors.lightGray)
+    drawText(8,'none',colors.lightGray)
   else
+    local y=8
     for _,name in ipairs(names) do
-      if y>=select(2,term.getSize())-2 then
-        line('  ...',colors.lightGray)
+      if y>=h-2 then
+        drawText(y,'...',colors.lightGray)
         break
       end
-      line('  '..name..'  ['..tostring(p.peripherals[name])..']',colors.lightGray)
+      drawText(y,name..'  ['..tostring(p.peripherals[name])..']',colors.lightGray)
       y=y+1
     end
   end
 
-  local _,h=term.getSize()
-  term.setCursorPos(1,h)
-  line('[B] Back   [Enter]/[Esc] Back',colors.lightGray)
-  while true do
-    local e,a=os.pullEvent()
-    if e=='key' and (a==keys.b or a==keys.enter or a==keys.escape or a==keys.backspace) then return end
-  end
+  backScreen()
 end
 
 local function systemScreen()
   clear()
-  header('System Information')
+  header('System')
 
-  local _,h=term.getSize()
-  line('PacificOS BIOS version: '..BIOS.version); 
-  term.setCursorPos(1,4)
-  line('ComputerCraft/CC:Tweaked: '..tostring(os.version and os.version() or 'unknown'))
-  term.setCursorPos(1,5)
-  line('OS uptime: '..string.format('%.1f seconds',os.clock()))
+  local version='unknown'
+  if type(os.version)=='function' then
+    local ok,value=pcall(os.version)
+    if ok then version=tostring(value) end
+  end
+
+  drawText(3,'PacificOS BIOS version: '..BIOS.version)
+  drawText(4,'CC:Tweaked version: '..version)
+  drawText(5,'OS uptime: '..string.format('%.1f seconds',os.clock()))
 
   local ok,free=pcall(fs.getFreeSpace,'/')
   if ok and free then
-    term.setCursorPos(1,7)
-    line('Free filesystem space: '..tostring(free)..' bytes')
+    drawText(7,'Free filesystem space: '..tostring(free)..' bytes')
   end
 
-  term.setCursorPos(1,h)
-  line('[B] Back   [Enter]/[Esc] Back',colors.lightGray)
-  while true do
-    local e,a=os.pullEvent()
-    if e=='key' and (a==keys.b or a==keys.enter or a==keys.escape or a==keys.backspace) then return end
-  end
+  backScreen()
 end
 
 function BIOS.safeRun(fn,...)
   return pcall(fn,...)
+end
+
+local function activate(selected,items)
+  if selected==1 then return 'boot'
+  elseif selected==2 then return 'hardware'
+  elseif selected==3 then return 'system'
+  elseif selected==4 then os.reboot()
+  elseif selected==5 then os.shutdown()
+  end
 end
 
 function BIOS.run()
@@ -135,16 +148,14 @@ function BIOS.run()
   while true do
     clear()
     header('Setup Utility')
-    local w,h=term.getSize()
 
-    term.setCursorPos(2,3)
-    line('CCI BIOS 1.7.0',colors.cyan)
-    term.setCursorPos(2,4)
-    line('Use Up/Down + Enter, or click an option.',colors.lightGray)
+    local w,h=term.getSize()
+    drawText(3,'CCI BIOS 1.7.0',colors.cyan)
+    drawText(4,'Use Up/Down + Enter, or click an option.',colors.lightGray)
 
     local startY=6
     for i,item in ipairs(items) do
-      local y=startY+(i-1)
+      local y=startY+i-1
       term.setCursorPos(3,y)
       term.setBackgroundColor(i==selected and colors.blue or colors.gray)
       term.setTextColor(colors.white)
@@ -154,34 +165,32 @@ function BIOS.run()
       term.setBackgroundColor(colors.black)
     end
 
-    term.setCursorPos(2,math.min(h, startY+#items+2))
-    line('PacificOS by Complex Computer International (CCI) 2026',colors.lightGray)
-    term.setCursorPos(2,h)
-    line('[Esc] Exit BIOS',colors.lightGray)
+    drawText(math.min(h-1,startY+#items+1),'PacificOS by Complex Computer International (CCI) 2026',colors.lightGray)
+    drawText(h,'[Esc] Exit BIOS',colors.lightGray)
 
-    local e,a,b=os.pullEvent()
+    local e,a,b,c=os.pullEvent()
     if e=='key' then
-      if a==keys.up then selected=math.max(1,selected-1)
-      elseif a==keys.down then selected=math.min(#items,selected+1)
+      if a==keys.up then
+        selected=math.max(1,selected-1)
+      elseif a==keys.down then
+        selected=math.min(#items,selected+1)
       elseif a==keys.enter then
-        if selected==1 then return
-        elseif selected==2 then hardwareScreen()
-        elseif selected==3 then systemScreen()
-        elseif selected==4 then os.reboot()
-        elseif selected==5 then os.shutdown()
+        local action=activate(selected,items)
+        if action=='boot' then return
+        elseif action=='hardware' then hardwareScreen()
+        elseif action=='system' then systemScreen()
         end
       elseif a==keys.escape or a==keys.q then
         return
       end
     elseif e=='mouse_click' or e=='monitor_touch' then
-      local x,y=b or 1,a or 1
-      if y>=startY and y<startY+#items and x>=3 then
+      local x,y=b or 1,c or 1
+      if x>=3 and y>=startY and y<startY+#items then
         selected=y-startY+1
-        if selected==1 then return
-        elseif selected==2 then hardwareScreen()
-        elseif selected==3 then systemScreen()
-        elseif selected==4 then os.reboot()
-        elseif selected==5 then os.shutdown()
+        local action=activate(selected,items)
+        if action=='boot' then return
+        elseif action=='hardware' then hardwareScreen()
+        elseif action=='system' then systemScreen()
         end
       end
     end
