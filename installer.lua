@@ -1,8 +1,8 @@
--- PacificOS 1.6.1 installer
+-- PacificOS 1.7.0 installer
 local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT="/pacificos"
-local VERSION="1.6.1"
-local CACHE="20260921-161"
+local VERSION="1.7.0"
+local CACHE="20260921-170"
 local files={
   "boot.lua","bios.lua","kernel.lua","manifest.lua",
   "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
@@ -61,13 +61,11 @@ end
 
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 
-local downloaded={}
 for i,path in ipairs(files) do
   write(string.format("[%02d/%02d] %-34s ",i,#files,path))
   local body,e=get(path)
   if not body then print("FAILED"); print(tostring(e)); return end
 
-  -- Verify the critical UI file before writing it.
   if path=="ui/widgets.lua" and not body:find("PACIFICOS_WIDGET_COMPAT_161",1,true) then
     print("FAILED")
     print("The server returned an old widgets.lua.")
@@ -75,9 +73,22 @@ for i,path in ipairs(files) do
     return
   end
 
+  if path=="boot.lua" and not body:find("PACIFICOS_BIOS_KEY_170",1,true) then
+    print("FAILED")
+    print("The server returned an old boot.lua.")
+    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
+    return
+  end
+
+  if path=="bios.lua" and not body:find("PACIFICOS_BIOS_170",1,true) then
+    print("FAILED")
+    print("The server returned an old bios.lua.")
+    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
+    return
+  end
+
   local ok,werr=writeFile(path,body)
   if not ok then print("FAILED"); print(tostring(werr)); return end
-  downloaded[path]=true
   print("OK")
 end
 
@@ -88,6 +99,7 @@ if not ok then print("FAILED: "..tostring(err)); return end
 print("")
 print("All "..#files.." PacificOS files downloaded.")
 print("Critical UI compatibility check: PASSED")
+print("BIOS hotkey check: PASSED")
 print("PacificOS "..VERSION.." installed successfully.")
 print("Rebooting...")
 os.sleep(1)
