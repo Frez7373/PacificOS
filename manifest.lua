@@ -1,6 +1,6 @@
 return {
   name = "PacificOS",
-  version = "1.8.0",
+  version = "1.8.1",
   channel = "stable",
   updated = "2026-09-22",
   company = "Complex Computer International (CCI)",
