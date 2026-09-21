@@ -4,7 +4,8 @@ local C = dofile("/pacificos/system/config.lua")
 local M = {}
 
 function M.run()
-  N.setEnabled(C.get("network") ~= false)
+  local okSet = pcall(N.setEnabled, C.get("network") ~= false)
+  if not okSet then N.enabled = C.get("network") ~= false end
   local notice = "Ready."
 
   while true do
@@ -18,10 +19,10 @@ function M.run()
 
     local y = 7
     for i, side in ipairs(status.modems) do
-      if y >= h - 8 then break end
+      if y >= math.max(7, h - 6) then break end
       local isOpen = false
       pcall(function() isOpen = rednet.isOpen(side) end)
-      U.label(3, y, tostring(side) .. "  [" .. (isOpen and "OPEN" or "CLOSED") .. "]",
+      U.label(3, y, tostring(side) .. " [" .. (isOpen and "OPEN" or "CLOSED") .. "]",
         isOpen and U._accent or U._muted)
       y = y + 1
     end
@@ -30,42 +31,57 @@ function M.run()
       U.label(3, 7, "No modem peripherals detected.", U._muted)
     end
 
-    local actionY = math.max(9, h - 6)
-    local buttonW = math.min(16, w - 3)
-    U.button(2, actionY, buttonW, 1, status.enabled and "DISABLE" or "ENABLE", U._accent)
+    local actionY = math.max(8, h - 5)
+    local mainW = math.min(16, math.max(8, w - 3))
+    U.button(2, actionY, mainW, 1, status.enabled and "DISABLE" or "ENABLE", U._accent)
 
     if w >= 38 then
-      U.button(20, actionY, math.min(16, w - 19), 1, "OPEN MODEMS", U._accent2)
-      U.button(2, actionY + 2, math.min(26, w - 3), 1, "BROADCAST TEST", U._accent2)
-      U.backButton(h - 2)
+      local secondW = math.min(16, math.max(8, w - 19))
+      U.button(20, actionY, secondW, 1, "OPEN MODEMS", U._accent2)
+      U.button(2, actionY + 2, math.min(26, w - 3), 1, "BROADCAST", U._accent2)
     else
-      U.button(2, actionY + 2, buttonW, 1, "BROADCAST", U._accent2)
-      U.backButton(h - 2)
+      U.button(2, actionY + 2, mainW, 1, "BROADCAST", U._accent2)
     end
 
+    U.backButton(h - 2)
     U.label(2, math.max(7, actionY - 1), notice, U._muted, math.max(1, w - 3))
-    U.status("Q/Esc/Backspace = back")
+    U.status("E = enable/disable | O = open | B = broadcast | Q/Esc = back")
 
     local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) then return end
 
-    if e == "mouse_click" or e == "monitor_touch" then
-      if U.backHit(b, c, h - 2, 18) then return end
-
-      if U.hit(2, actionY, buttonW, 1, b, c) then
+    if e == "key" then
+      if a == keys.e then
         local enabled = not status.enabled
         C.set("network", enabled)
         local ok, err = N.setEnabled(enabled)
-        notice = ok and (enabled and "Network enabled." or "Network disabled.") or tostring(err)
-      elseif w >= 38 and U.hit(20, actionY, math.min(16, w - 19), 1, b, c) then
-        local ok, err = N.open()
-        notice = ok and ("Opened " .. tostring(err) .. " modem(s).") or tostring(err)
-      elseif U.hit(2, actionY + 2, math.min(26, w - 3), 1, b, c) then
-        local ok, err = N.broadcast({
-          type = "ping",
-          from = os.getComputerID(),
-          time = os.clock()
-        }, "pacific")
+        notice = ok and ("Network " .. (enabled and "enabled." or "disabled.")) or tostring(err)
+      elseif a == keys.o then
+        C.set("network", true)
+        local ok, value = N.setEnabled(true)
+        notice = ok and ("Opened " .. tostring(value or 0) .. " modem(s).") or tostring(value)
+      elseif a == keys.b then
+        local ok, err = N.broadcast({type="ping", from=os.getComputerID(), time=os.clock()}, "pacific")
+        notice = ok and "Broadcast sent." or tostring(err)
+      elseif a == keys.enter then
+        local ok, err = N.broadcast({type="ping", from=os.getComputerID(), time=os.clock()}, "pacific")
+        notice = ok and "Broadcast sent." or tostring(err)
+      end
+
+    elseif e == "mouse_click" or e == "monitor_touch" then
+      if U.backHit(b, c, h - 2, 18) then return end
+
+      if U.hit(2, actionY, mainW, 1, b, c) then
+        local enabled = not status.enabled
+        C.set("network", enabled)
+        local ok, err = N.setEnabled(enabled)
+        notice = ok and ("Network " .. (enabled and "enabled." or "disabled.")) or tostring(err)
+      elseif w >= 38 and U.hit(20, actionY, math.min(16, math.max(8, w - 19)), 1, b, c) then
+        C.set("network", true)
+        local ok, value = N.setEnabled(true)
+        notice = ok and ("Opened " .. tostring(value or 0) .. " modem(s).") or tostring(value)
+      elseif U.hit(2, actionY + 2, math.min(w - 3, w >= 38 and 26 or mainW), 1, b, c) then
+        local ok, err = N.broadcast({type="ping", from=os.getComputerID(), time=os.clock()}, "pacific")
         notice = ok and "Broadcast sent." or tostring(err)
       end
     end
