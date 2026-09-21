@@ -3,7 +3,7 @@ local PATH = ROOT .. "/config.cfg"
 
 local function defaults()
   return {
-    version = "1.8.0",
+    version = "1.9.0",
     theme = "pacific-blue",
     hostname = "pacificos",
     autostart = true,
@@ -35,13 +35,12 @@ local function load()
 
   local ok, loaded = pcall(textutils.unserialize, raw)
   if ok and type(loaded) == "table" then
-    for key, value in pairs(loaded) do
-      data[key] = value
-    end
+    for key, value in pairs(loaded) do data[key] = value end
   end
 
-  data.version = "1.8.0"
+  data.version = "1.9.0"
   if type(data.hostname) ~= "string" or data.hostname == "" then data.hostname = "pacificos" end
+  if type(data.boot_delay) ~= "number" then data.boot_delay = 0.2 end
 end
 
 local function save()
@@ -55,9 +54,7 @@ end
 
 load()
 
-function M.get(key)
-  return data[key]
-end
+function M.get(key) return data[key] end
 
 function M.set(key, value)
   data[key] = value
@@ -66,9 +63,7 @@ end
 
 function M.all()
   local result = {}
-  for key, value in pairs(data) do
-    result[key] = value
-  end
+  for key, value in pairs(data) do result[key] = value end
   return result
 end
 
