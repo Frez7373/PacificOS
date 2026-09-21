@@ -15,7 +15,7 @@ end
 
 function M.log(message)
   local dir = "/pacificos/logs"
-  if not fs.exists(dir) then fs.makeDir(dir) end
+  if not fs.exists(dir) then pcall(fs.makeDir, dir) end
   local handle = fs.open(dir .. "/system.log", "a")
   if handle then
     handle.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(message))
@@ -28,6 +28,8 @@ function M.isProtected(path)
   return path == "/"
     or path == "/startup.lua"
     or path == "/pacificos"
+    or path == "/pacificos/manifest.lua"
+    or isPrefix(path, "/pacificos/apps")
     or isPrefix(path, "/pacificos/system")
     or isPrefix(path, "/pacificos/ui")
     or isPrefix(path, "/pacificos/recovery")
