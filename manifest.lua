@@ -6,6 +6,7 @@ return {
   company="Complex Computer International (CCI)",
   copyright="2026 CCI",
   files={
+    "startup.lua",
     "boot.lua","bios.lua","kernel.lua","manifest.lua",
     "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
     "ui/theme.lua","ui/widgets.lua","ui/windows.lua",
