@@ -103,6 +103,14 @@ local function targetPath(path)
   return path == "startup.lua" and "/startup.lua" or ROOT .. "/" .. path
 end
 
+local function validateStaged(path)
+  if not tostring(path):lower():match("%.lua$") then return true end
+  local fn, err = loadfile(STAGE .. "/" .. path)
+  if not fn then return false, tostring(err) end
+  return true
+end
+
+
 function M.installFile(path, body)
   local target = targetPath(path)
   mkdirs(target)
@@ -140,6 +148,13 @@ function M.update(manifest)
         removeTree(STAGE)
         removeTree(BACKUP)
         return false, stageErr, downloaded
+      end
+
+      local valid, syntaxErr = validateStaged(path)
+      if not valid then
+        removeTree(STAGE)
+        removeTree(BACKUP)
+        return false, path .. ": invalid Lua: " .. tostring(syntaxErr), downloaded
       end
 
       staged[#staged + 1] = path
