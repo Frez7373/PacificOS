@@ -10,7 +10,7 @@ function M.run()
   pcall(function() free=tostring(fs.getFreeSpace('/')) end)
   local label=os.getComputerLabel()
   local lines={
-   'PacificOS 1.5.0',
+   'PacificOS 1.7.4',
    'Made by Complex Computer International (CCI)',
    'Copyright CCI 2026',
    'Computer ID: '..tostring(os.getComputerID()),
