@@ -1,23 +1,38 @@
 local U = dofile("/pacificos/ui/widgets.lua")
 local M = {}
 
-local monthNames = {
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+local months = {
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
 }
-local week = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
+local week = {"Mo","Tu","We","Th","Fr","Sa","Su"}
+
+local function isLeap(year)
+  return year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0)
+end
 
 local function daysInMonth(year, month)
-  local nextMonth = month == 12 and 1 or month + 1
-  local nextYear = month == 12 and year + 1 or year
-  local t = os.time({year = nextYear, month = nextMonth, day = 1, hour = 12})
-  return tonumber(os.date("%d", t - 86400)) or 30
+  local days = {31,28,31,30,31,30,31,31,30,31,30,31}
+  if month == 2 and isLeap(year) then return 29 end
+  return days[month]
 end
 
 local function mondayIndex(year, month)
-  local t = os.time({year = year, month = month, day = 1, hour = 12})
-  local wday = tonumber(os.date("%w", t)) or 0
-  return (wday + 6) % 7
+  local y = year
+  local m = month
+  if m < 3 then y = y - 1; m = m + 12 end
+  local k = y % 100
+  local j = math.floor(y / 100)
+  local h = (1 + math.floor(13 * (m + 1) / 5) + k + math.floor(k / 4) + math.floor(j / 4) + 5 * j) % 7
+  -- Zeller: 0=Saturday, 1=Sunday, 2=Monday...
+  return (h + 5) % 7
+end
+
+local function changeMonth(year, month, delta)
+  month = month + delta
+  if month < 1 then month = 12; year = year - 1 end
+  if month > 12 then month = 1; year = year + 1 end
+  return year, month
 end
 
 function M.run()
@@ -26,11 +41,13 @@ function M.run()
 
   while true do
     local w, h = term.getSize()
+    local offset = mondayIndex(year, month)
+    local total = daysInMonth(year, month)
+
     U.clear()
     U.header("Calendar", true)
-
-    U.center(4, monthNames[month] .. " " .. tostring(year), U._accent)
-    U.label(3, 6, "Today: " .. tostring(now.day) .. " " .. monthNames[now.month] .. " " .. tostring(now.year), U._muted)
+    U.center(4, months[month] .. " " .. tostring(year), U._accent)
+    U.label(2, 6, "Today: " .. tostring(now.day) .. " " .. months[now.month] .. " " .. tostring(now.year), U._muted)
 
     local cell = math.max(4, math.floor((w - 6) / 7))
     local x0 = 3
@@ -38,48 +55,44 @@ function M.run()
       U.label(x0 + (i - 1) * cell, 8, name:sub(1, math.min(#name, cell)), U._accent)
     end
 
-    local total = daysInMonth(year, month)
-    local offset = mondayIndex(year, month)
-    local todayKey = now.year == year and now.month == month and now.day or -1
-
     for day = 1, total do
       local slot = offset + day - 1
       local col = slot % 7
       local row = math.floor(slot / 7)
       local x = x0 + col * cell
-      local y = 9 + row * 2
-      if y < h - 3 then
-        local bg = day == todayKey and U._accent or U._accent2
-        local fg = day == todayKey and U._textOnBlue or U._text
-        U.button(x, y, math.max(3, cell - 1), 1, tostring(day), bg, fg)
+      local y = 9 + row
+      if y < h - 4 then
+        local today = day == now.day and month == now.month and year == now.year
+        U.button(x, y, math.max(3, cell - 1), 1, tostring(day),
+          today and U._accent or U._accent2,
+          today and U._textOnBlue or U._text)
       end
     end
 
-    U.backButton(h - 2)
-    U.status("Left/Right = previous/next month | Q/Esc = back")
+    local navY = math.max(15, h - 3)
+    local navW = math.max(8, math.floor((w - 5) / 2))
+    U.button(2, navY, navW, 1, "< PREV", U._accent2)
+    U.button(3 + navW, navY, navW, 1, "NEXT >", U._accent2)
+
+    U.status("Left/Right or PREV/NEXT | Q/Esc/Backspace = back")
 
     local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) then return end
+
     if e == "key" then
-      if a == keys.left then
-        month = month - 1
-        if month < 1 then month = 12; year = year - 1 end
-      elseif a == keys.right then
-        month = month + 1
-        if month > 12 then month = 1; year = year + 1 end
+      if a == keys.left then year, month = changeMonth(year, month, -1)
+      elseif a == keys.right then year, month = changeMonth(year, month, 1)
       end
     elseif e == "mouse_click" or e == "monitor_touch" then
-      if U.backHit(b, c, h - 2, 18) then return end
-      if c == 8 then
-        if b >= x0 + 5 * cell then
-          month = month + 1
-          if month > 12 then month = 1; year = year + 1 end
-        elseif b >= x0 then
-          month = month - 1
-          if month < 1 then month = 12; year = year - 1 end
-        end
+      if U.backHit(b, c, h - 2, 18) then
+        return
+      elseif U.hit(2, navY, navW, 1, b, c) then
+        year, month = changeMonth(year, month, -1)
+      elseif U.hit(3 + navW, navY, navW, 1, b, c) then
+        year, month = changeMonth(year, month, 1)
       end
     end
+
     now = os.date("*t")
   end
 end
