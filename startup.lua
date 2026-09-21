@@ -1,4 +1,4 @@
--- PacificOS 1.8.0 startup
+-- PacificOS 1.9.0 startup wrapper
 local ROOT = "/pacificos"
 
 local ok, err = pcall(dofile, ROOT .. "/boot.lua")
@@ -8,13 +8,12 @@ term.setBackgroundColor(colors.white)
 term.setTextColor(colors.red)
 term.clear()
 term.setCursorPos(2, 2)
-
 print("PACIFICOS STARTUP ERROR")
 print("")
 term.setTextColor(colors.black)
 print(tostring(err))
 print("")
-print("R = Recovery   Q = Shutdown")
+print("R = Recovery   Q/Esc = Shutdown")
 
 while true do
   local e, key = os.pullEvent()
@@ -25,13 +24,10 @@ while true do
       print("")
       print("Recovery failed:")
       print(tostring(recoveryErr))
-      print("")
-      print("Press any key to shutdown.")
-      os.pullEvent()
       os.shutdown()
     end
     return
-  elseif e == "key" and key == keys.q then
+  elseif e == "key" and (key == keys.q or key == keys.escape) then
     os.shutdown()
     return
   end
