@@ -78,33 +78,66 @@ local function calculate(history)
   else history[#history+1]=s.." -> "..tostring(err) end
 end
 
+local function buttonLayout(w)
+  if w>=46 then
+    return {
+      {2,7,12,2,"Calculate","calculate"},
+      {16,7,12,2,"Clear","clear"},
+      {30,7,12,2,"Help","help"}
+    }
+  end
+
+  local gap=1
+  local bw=math.max(8,math.floor((w-3)/2))
+  return {
+    {2,7,bw,2,"Calculate","calculate"},
+    {2+bw+gap,7,bw,2,"Clear","clear"},
+    {2,10,bw,2,"Help","help"}
+  }
+end
+
+local function hit(button,x,y)
+  return x>=button[1] and x<button[1]+button[3] and y>=button[2] and y<button[2]+button[4]
+end
+
 function M.run()
   local history={}
   while true do
     local w,h=term.getSize()
     U.clear(); U.header("Calculator")
-    U.label(2,3,"Operators: +  -  *  /  %  ^  ( )")
+    U.label(2,3,"Operators: + - * / % ^ ( )")
     U.label(2,4,"Functions: sqrt abs round sin cos tan sec csc cot")
     U.label(2,5,"More: asin acos atan deg rad log ln log10 exp pow fact gcd lcm clamp")
-    U.button(2,7,12,2,"Calculate",colors.blue)
-    U.button(16,7,12,2,"Clear",colors.gray)
-    U.button(30,7,12,2,"Help",colors.gray)
-    U.label(2,10,"History",U._accent)
-    local y=11
-    for i=math.max(1,#history-5),#history do
-      U.label(3,y,history[i],U._muted); y=y+1
+
+    local buttons=buttonLayout(w)
+    for _,b in ipairs(buttons) do U.button(b[1],b[2],b[3],b[4],b[5],b[5]=="Calculate" and colors.blue or colors.gray) end
+
+    local historyY=14
+    if w<46 then historyY=14 end
+    U.label(2,historyY,"History",U._accent)
+    local y=historyY+1
+    for i=math.max(1,#history-3),#history do
+      if y>=h then break end
+      U.label(3,y,history[i],U._muted)
+      y=y+1
     end
+
     U.status("Enter = calculate | Q/Esc = back")
     local e,a,b,c=os.pullEvent()
     if e=="key" then
       if a==keys.q or a==keys.escape then return
       elseif a==keys.enter then calculate(history) end
     elseif e=="mouse_click" or e=="monitor_touch" then
-      if c>=7 and c<9 and b>=2 and b<14 then calculate(history)
-      elseif c>=7 and c<9 and b>=16 and b<28 then history={}
-      elseif c>=7 and c<9 and b>=30 and b<42 then
-        U.label(2,17,"Examples: 2+3*4 | sqrt(81) | sin(30) | round(2.6)",U._muted)
-        os.pullEvent()
+      for _,button in ipairs(buttons) do
+        if hit(button,b,c) then
+          if button[6]=="calculate" then calculate(history)
+          elseif button[6]=="clear" then history={}
+          elseif button[6]=="help" then
+            U.label(2,17,"Examples: 2+3*4 | sqrt(81) | sin(30) | round(2.6)",U._muted)
+            os.pullEvent()
+          end
+          break
+        end
       end
     end
   end
