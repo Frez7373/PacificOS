@@ -7,6 +7,8 @@ local PROTECTED = {
   ["/pacificos/boot.lua"] = true,
   ["/pacificos/bios.lua"] = true,
   ["/pacificos/kernel.lua"] = true,
+  ["/pacificos/manifest.lua"] = true,
+  ["/pacificos/apps"] = true,
   ["/pacificos/system"] = true,
   ["/pacificos/ui"] = true,
   ["/pacificos/recovery"] = true
@@ -20,7 +22,7 @@ function M.isProtected(path)
   if type(path) ~= "string" then return true end
   path = fs.combine("/", path)
   if PROTECTED[path] then return true end
-
+  if isPrefix(path, "/pacificos/apps") then return true end
   if isPrefix(path, "/pacificos/system") then return true end
   if isPrefix(path, "/pacificos/ui") then return true end
   if isPrefix(path, "/pacificos/recovery") then return true end
@@ -34,14 +36,12 @@ function M.stats(path)
   local function scan(current)
     if fs.isDir(current) then
       directories = directories + 1
-      for _, name in ipairs(fs.list(current)) do
-        scan(fs.combine(current, name))
-      end
+      for _, name in ipairs(fs.list(current)) do scan(fs.combine(current, name)) end
       return
     end
 
     files = files + 1
-    local size
+    local size = nil
     local ok = pcall(function() size = fs.getSize(current) end)
     if ok and type(size) == "number" then
       bytes = bytes + size
@@ -55,7 +55,7 @@ function M.stats(path)
   end
 
   if fs.exists(path) then scan(path) end
-  return {files = files, directories = directories, bytes = bytes}
+  return {files=files, directories=directories, bytes=bytes}
 end
 
 function M.safeDelete(path)
@@ -78,7 +78,6 @@ function M.write(path, data)
   if M.isProtected(path) then return false, "protected system path" end
   local dir = fs.getDir(path)
   if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
-
   local handle, err = fs.open(path, "w")
   if not handle then return false, err or "cannot open" end
   handle.write(tostring(data or ""))
