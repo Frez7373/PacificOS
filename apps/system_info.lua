@@ -30,7 +30,7 @@ function M.run()
 
     U.clear()
     U.header("System Information", true)
-    U.label(2, 4, "PacificOS 1.8.0", U._accent)
+    U.label(2, 4, "PacificOS 1.9.0", U._accent)
     U.label(2, 5, "Complex Computer International (CCI) 2026", U._text)
     U.label(2, 7, "Computer ID: " .. tostring(os.getComputerID()))
     U.label(2, 8, "Computer label: " .. tostring(label))
@@ -38,17 +38,19 @@ function M.run()
     U.label(2, 10, "CraftOS: " .. tostring(craftos))
     U.label(2, 11, "Storage free: " .. formatBytes(free))
     U.label(2, 12, "Storage capacity: " .. formatBytes(capacity))
-    U.label(2, 13, "Peripherals: " .. tostring(#devices))
-
-    local y = 15
-    for i = 1, math.min(#devices, h - 18) do
-      U.label(4, y, tostring(devices[i]) .. " [" .. tostring(peripheral.getType(devices[i])) .. "]", U._muted)
-      y = y + 1
+    if h >= 15 then
+      U.label(2, 13, "Peripherals: " .. tostring(#devices))
+      local y = 15
+      for i = 1, math.min(#devices, h - 17) do
+        U.label(4, y, tostring(devices[i]) .. " [" .. tostring(peripheral.getType(devices[i])) .. "]", U._muted)
+        y = y + 1
+      end
+    else
+      U.label(2, math.max(10, h - 3), "Peripherals: " .. tostring(#devices), U._muted)
     end
 
     U.backButton(h - 2)
     U.status("Q / Esc / Backspace = close")
-
     local e, a, b, c = os.pullEvent()
     if U.closeEvent(e, a) then return end
     if (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
