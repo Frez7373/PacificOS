@@ -1,4 +1,4 @@
--- PacificOS 1.8.0 boot
+-- PacificOS 1.8.1 boot
 local ROOT = "/pacificos"
 local T = dofile(ROOT .. "/ui/theme.lua")
 local C = dofile(ROOT .. "/system/config.lua")
@@ -14,8 +14,8 @@ local function showError(title, message)
   print("")
   print(tostring(message))
   print("")
-  term.setTextColor(T.muted)
-  print("R = Recovery   Q = Shutdown")
+  term.setTextColor(T.text)
+  print("[R] Recovery    [Q] Shutdown")
 
   while true do
     local e, k = os.pullEvent()
@@ -47,18 +47,26 @@ local function waitForBIOS()
   term.setTextColor(T.text)
   term.clear()
 
-  term.setCursorPos(2, 3)
-  term.setTextColor(T.accent)
-  write("PACIFICOS")
+  term.setBackgroundColor(T.dark)
+  term.setTextColor(T.textOnBlue)
+  term.setCursorPos(1, 1)
+  write(string.rep(" ", w))
+  term.setCursorPos(2, 1)
+  write("PACIFICOS 1.8.1")
+
+  term.setBackgroundColor(T.bg)
   term.setTextColor(T.text)
-  term.setCursorPos(2, 5)
+  term.setCursorPos(2, 4)
   write("Press ] quickly to enter BIOS")
-  term.setCursorPos(2, 6)
-  term.setTextColor(T.muted)
+  term.setCursorPos(2, 5)
   write("BIOS window: 1.5 seconds")
-  term.setCursorPos(2, math.max(1, h - 1))
-  term.setTextColor(T.accent)
+  term.setCursorPos(2, 7)
+  term.setTextColor(T.muted)
   write("Complex Computer International (CCI) 2026")
+
+  term.setCursorPos(2, math.max(1, h - 1))
+  term.setTextColor(T.muted)
+  write("Starting PacificOS...")
 
   local timer = os.startTimer(1.5)
   while true do
@@ -94,20 +102,19 @@ end
 local function progress(y, percent)
   local barWidth = math.max(12, math.min(w - 6, 42))
   local filled = math.floor(barWidth * percent / 100)
-  local x = math.max(1, math.floor((w - barWidth) / 2))
 
-  term.setCursorPos(x, y)
+  term.setCursorPos(math.max(1, math.floor((w - barWidth) / 2)), y)
   term.setBackgroundColor(T.panel)
   write(string.rep(" ", barWidth))
-  term.setCursorPos(x, y)
-  term.setBackgroundColor(T.accent)
+  term.setCursorPos(math.max(1, math.floor((w - barWidth) / 2)), y)
+  term.setBackgroundColor(T.dark)
   write(string.rep(" ", filled))
   term.setBackgroundColor(T.bg)
 end
 
 local centerY = math.max(4, math.floor(h / 2) - 5)
 center(centerY, "PACIFICOS", T.accent)
-center(centerY + 2, "PacificOS 1.8.0", T.text)
+center(centerY + 2, "PacificOS 1.8.1", T.text)
 center(centerY + 4, "Complex Computer International (CCI)", T.text)
 center(centerY + 5, "2026", T.muted)
 
@@ -132,7 +139,7 @@ for i, step in ipairs(steps) do
   progress(math.min(h - 4, centerY + 7), percent)
 
   term.setCursorPos(2, math.min(h - 2, centerY + 9))
-  term.setTextColor(T.muted)
+  term.setTextColor(T.text)
   write(step:sub(1, math.max(1, w - 12)))
 
   term.setTextColor(T.accent)
