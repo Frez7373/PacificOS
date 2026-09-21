@@ -100,7 +100,7 @@ end
 
 local cy=math.max(4,math.floor(h/2)-5)
 center(cy,'PACIFICOS',T.accent)
-center(cy+2,'PacificOS 1.7.2',T.muted)
+center(cy+2,'PacificOS 1.7.3',T.muted)
 center(cy+4,'Complex Computer International (CCI)',T.text)
 center(cy+5,'© 2026 CCI',T.muted)
 
