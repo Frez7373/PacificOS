@@ -6,7 +6,9 @@ local function runCommand(command)
     return false, "CC:Tweaked shell API is unavailable."
   end
   local ok, result = pcall(shell.run, command)
-  return ok, ok and nil or tostring(result)
+  if not ok then return false, tostring(result) end
+  if result == false then return false, "Command failed." end
+  return true
 end
 
 function M.run()
@@ -17,7 +19,6 @@ function M.run()
     local w, h = term.getSize()
     U.clear()
     U.header("Terminal", true)
-
     U.label(2, 4, "Direct CC:Tweaked shell", U._accent)
     U.label(2, 5, "Commands execute in the current computer session.", U._muted)
 
@@ -28,7 +29,8 @@ function M.run()
     end
 
     U.label(2, math.min(h - 4, 14), notice, U._muted, math.max(1, w - 3))
-    term.setCursorPos(2, math.min(h - 2, 16))
+    local promptY = math.min(h - 2, 16)
+    term.setCursorPos(2, math.max(1, promptY))
     term.setTextColor(U._accent)
     write("> ")
     local command = read()
@@ -40,12 +42,11 @@ function M.run()
     if command ~= "" then
       history[#history + 1] = "$ " .. command
       if command == "clear" then
-        -- The next loop clears the screen.
+        notice = "Screen cleared."
       else
         local ok, err = runCommand(command)
-        if not ok then
-          history[#history + 1] = "! " .. tostring(err)
-        end
+        notice = ok and "Command finished." or tostring(err)
+        if not ok then history[#history + 1] = "! " .. tostring(err) end
       end
     end
   end
