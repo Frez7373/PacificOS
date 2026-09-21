@@ -73,7 +73,7 @@ for i,path in ipairs(files) do
     return
   end
 
-  if path=="boot.lua" and not body:find("PACIFICOS_BIOS_KEY_170",1,true) then
+  if path=="boot.lua" and not body:find("PACIFICOS_BIOS_KEY_171",1,true) then
     print("FAILED")
     print("The server returned an old boot.lua.")
     print("Please retry; fresh-cache protection prevented an unsafe reboot.")
