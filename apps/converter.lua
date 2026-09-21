@@ -50,8 +50,10 @@ local function promptConversion(category)
   local amount, fromUnit, toUnit = input:match("^%s*([%-%d%.]+)%s+(%S+)%s+(%S+)%s*$")
   amount = tonumber(amount)
 
+  local resultY = math.min(11, math.max(4, h - 4))
+
   if not amount then
-    U.label(2, 11, "Invalid number.", U._bad)
+    U.label(2, resultY, "Invalid number.", U._bad)
     U.status("Press Enter to return")
     os.pullEvent("key")
     return
@@ -59,9 +61,9 @@ local function promptConversion(category)
 
   local result, err = convert(category, amount, fromUnit, toUnit)
   if not result then
-    U.label(2, 11, err, U._bad)
+    U.label(2, resultY, err, U._bad)
   else
-    U.label(2, 11, tostring(amount) .. " " .. fromUnit .. " = " .. tostring(result) .. " " .. toUnit, U._accent)
+    U.label(2, resultY, tostring(amount) .. " " .. fromUnit .. " = " .. tostring(result) .. " " .. toUnit, U._accent)
   end
 
   U.backButton(h - 2)
