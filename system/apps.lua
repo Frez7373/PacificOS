@@ -1,8 +1,15 @@
-local ROOT="/pacificos"
-local DATA=ROOT.."/data"
-local USER=ROOT.."/userapps"
-local REG=DATA.."/apps.cfg"
-local M={}
+local ROOT = "/pacificos"
+local DATA = ROOT .. "/data"
+local USER = ROOT .. "/userapps"
+local REG = DATA .. "/apps.cfg"
+local M = {}
+
+local RESERVED = {
+  ["files"]=true,["settings"]=true,["calculator"]=true,["clock"]=true,["calendar"]=true,
+  ["network"]=true,["devices"]=true,["editor"]=true,["terminal"]=true,["task manager"]=true,
+  ["updater"]=true,["app installer"]=true,["antivirus"]=true,["system info"]=true,
+  ["system monitor"]=true,["stopwatch"]=true,["converter"]=true,["about"]=true
+}
 
 local function ensure()
   if not fs.exists(DATA) then fs.makeDir(DATA) end
@@ -31,16 +38,14 @@ local function saveRegistry(t)
 end
 
 local function cleanName(name)
-  name=tostring(name or ""):gsub("^%s+",""):gsub("%s+$","")
-  name=name:gsub("[%c]","")
+  name=tostring(name or ""):gsub("^%s+",""):gsub("%s+$",""):gsub("[%c]","")
   if #name>32 then name=name:sub(1,32) end
   return name
 end
 
 local function validRelative(path)
   path=tostring(path or "")
-  if path=="" or path:sub(1,1)=="/" then return false end
-  if path:find("%.%.",1,true) then return false end
+  if path=="" or path:sub(1,1)=="/" or path:find("%.%.",1,true) then return false end
   return path:match("^userapps/[%w%._%-]+%.lua$")~=nil
 end
 
@@ -48,15 +53,12 @@ function M.list()
   local data=loadRegistry()
   local out={}
   local changed=false
-  for i,e in ipairs(data) do
-    if type(e)=="table" and type(e.name)=="string" and type(e.path)=="string" and validRelative(e.path) and fs.exists(ROOT.."/"..e.path) and not fs.isDir(ROOT.."/"..e.path) then
+  for _,e in ipairs(data) do
+    if type(e)=="table" and type(e.name)=="string" and type(e.path)=="string"
+      and validRelative(e.path)
+      and fs.exists(ROOT.."/"..e.path) and not fs.isDir(ROOT.."/"..e.path) then
       if e.desktop==nil then e.desktop=true; changed=true end
-      out[#out+1]={
-        name=e.name,
-        path=e.path,
-        source=e.source or "unknown",
-        desktop=e.desktop~=false
-      }
+      out[#out+1]={name=e.name,path=e.path,source=e.source or "unknown",desktop=e.desktop~=false}
     else
       changed=true
     end
@@ -68,37 +70,31 @@ end
 
 function M.listDesktop()
   local out={}
-  for _,e in ipairs(M.list()) do
-    if e.desktop then out[#out+1]=e end
-  end
+  for _,e in ipairs(M.list()) do if e.desktop then out[#out+1]=e end end
   return out
 end
 
 function M.find(name)
   name=tostring(name or ""):lower()
-  for _,e in ipairs(M.list()) do
-    if e.name:lower()==name then return e end
-  end
+  for _,e in ipairs(M.list()) do if e.name:lower()==name then return e end end
   return nil
 end
 
 function M.register(name,path,source)
   name=cleanName(name)
+  local lower=name:lower()
   if name=="" then return false,"invalid app name" end
+  if RESERVED[lower] then return false,"name is reserved by PacificOS" end
   if not validRelative(path) then return false,"invalid app path" end
   if not fs.exists(ROOT.."/"..path) then return false,"app file not found" end
 
   local data=loadRegistry()
   for _,e in ipairs(data) do
-    if type(e)=="table" and tostring(e.name):lower()==name:lower() then
-      e.name=name
-      e.path=path
-      e.source=source or e.source or "unknown"
-      e.desktop=true
+    if type(e)=="table" and tostring(e.name):lower()==lower then
+      e.name=name; e.path=path; e.source=source or e.source or "unknown"; e.desktop=true
       return saveRegistry(data)
     end
   end
-
   data[#data+1]={name=name,path=path,source=source or "unknown",desktop=true}
   return saveRegistry(data)
 end
@@ -119,14 +115,10 @@ function M.remove(name)
   local out={}
   local found=nil
   for _,e in ipairs(data) do
-    if type(e)=="table" and tostring(e.name):lower()==tostring(name):lower() then
-      found=e
-    else
-      out[#out+1]=e
-    end
+    if type(e)=="table" and tostring(e.name):lower()==tostring(name):lower() then found=e else out[#out+1]=e end
   end
   if not found then return false,"application not found" end
-  if validRelative(found.path) and fs.exists(ROOT.."/"..found.path) then fs.delete(ROOT.."/"..found.path) end
+  if validRelative(found.path) and fs.exists(ROOT.."/"..found.path) then pcall(fs.delete, ROOT.."/"..found.path) end
   local ok,err=saveRegistry(out)
   if not ok then return false,err end
   return true
