@@ -10,7 +10,7 @@ return {
   card2 = C.gray,
   text = C.black,
   textOnBlue = C.white,
-  muted = C.gray,
+  muted = C.darkGray,
   accent = C.darkBlue,
   accent2 = C.lightGray,
   good = C.green,
