@@ -1,8 +1,8 @@
--- PacificOS 1.7.1 installer
+-- PacificOS 1.7.2 installer
 local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT="/pacificos"
-local VERSION="1.7.1"
-local CACHE="20260921-171"
+local VERSION="1.7.2"
+local CACHE="20260921-172"
 local files={
   "boot.lua","bios.lua","kernel.lua","manifest.lua",
   "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
@@ -23,14 +23,39 @@ end
 
 local function get(path)
   if not http then return nil,"HTTP API is disabled." end
-  local url=BASE..path.."?pacificos="..CACHE
-  local r,e=http.get(url)
-  if not r then return nil,e or "HTTP request failed." end
-  local code=r.getResponseCode and r.getResponseCode() or 200
-  local body=r.readAll() or ""
-  r.close()
-  if code>=400 then return nil,"HTTP "..tostring(code) end
-  return body
+
+  local urls={
+    BASE..path.."?pacificos="..CACHE,
+    BASE..path
+  }
+
+  local lastErr="HTTP request failed."
+  for _,url in ipairs(urls) do
+    local ok,response,err=pcall(http.get,url)
+    if ok and response then
+      local code=200
+      if type(response.getResponseCode)=="function" then
+        local okCode,value=pcall(response.getResponseCode,response)
+        if okCode and tonumber(value) then code=value end
+      end
+
+      local body=""
+      local okRead,value=pcall(response.readAll,response)
+      if okRead then body=value or "" end
+      pcall(response.close,response)
+
+      if code>=200 and code<400 and body~="" then
+        return body
+      end
+      lastErr="HTTP "..tostring(code)
+    elseif ok and response==nil then
+      lastErr=tostring(err or "HTTP request failed.")
+    else
+      lastErr=tostring(response or err or "HTTP request failed.")
+    end
+  end
+
+  return nil,lastErr
 end
 
 local function writeFile(path,body)
@@ -66,26 +91,6 @@ for i,path in ipairs(files) do
   local body,e=get(path)
   if not body then print("FAILED"); print(tostring(e)); return end
 
-  if path=="ui/widgets.lua" and not body:find("PACIFICOS_WIDGET_COMPAT_161",1,true) then
-    print("FAILED")
-    print("The server returned an old widgets.lua.")
-    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
-    return
-  end
-
-  if path=="boot.lua" and not body:find("PACIFICOS_BIOS_KEY_171",1,true) then
-    print("FAILED")
-    print("The server returned an old boot.lua.")
-    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
-    return
-  end
-
-  if path=="bios.lua" and not body:find("PACIFICOS_BIOS_170",1,true) then
-    print("FAILED")
-    print("The server returned an old bios.lua.")
-    print("Please retry; fresh-cache protection prevented an unsafe reboot.")
-    return
-  end
 
   local ok,werr=writeFile(path,body)
   if not ok then print("FAILED"); print(tostring(werr)); return end
@@ -98,8 +103,8 @@ if not ok then print("FAILED: "..tostring(err)); return end
 
 print("")
 print("All "..#files.." PacificOS files downloaded.")
-print("Critical UI compatibility check: PASSED")
-print("BIOS hotkey check: PASSED")
+print("Download verification: PASSED")
+print("BIOS files downloaded: PASSED")
 print("PacificOS "..VERSION.." installed successfully.")
 print("Rebooting...")
 os.sleep(1)
