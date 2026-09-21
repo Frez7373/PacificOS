@@ -1,6 +1,5 @@
 -- PacificOS 1.8.1 boot
 local ROOT = "/pacificos"
-local T = dofile(ROOT .. "/ui/theme.lua")
 local C = dofile(ROOT .. "/system/config.lua")
 
 -- Boot must remain independent from optional theme values.
@@ -8,13 +7,14 @@ local BOOT_BLUE = (colors and colors.blue) or (colours and colours.blue) or 8
 local BOOT_WHITE = (colors and colors.white) or (colours and colours.white) or 1
 local BOOT_BLACK = (colors and colors.black) or (colours and colours.black) or 32768
 local BOOT_GRAY = (colors and colors.gray) or (colours and colours.gray) or 128
+local BOOT_RED = (colors and colors.red) or (colours and colours.red) or 16384
 
 local function showError(title, message)
   term.setBackgroundColor(BOOT_WHITE)
   term.setTextColor(BOOT_BLACK)
   term.clear()
   term.setCursorPos(2, 2)
-  term.setTextColor(T.bad)
+  term.setTextColor(BOOT_RED)
   print(title)
   term.setTextColor(BOOT_BLACK)
   print("")
@@ -50,7 +50,7 @@ end
 local function waitForBIOS()
   local w, h = term.getSize()
   term.setBackgroundColor(BOOT_WHITE)
-  term.setTextColor(T.text)
+  term.setTextColor(BOOT_BLACK)
   term.clear()
 
   term.setBackgroundColor(BOOT_BLUE)
@@ -61,7 +61,7 @@ local function waitForBIOS()
   write("PACIFICOS 1.8.1")
 
   term.setBackgroundColor(BOOT_WHITE)
-  term.setTextColor(T.text)
+  term.setTextColor(BOOT_BLACK)
   term.setCursorPos(2, 4)
   write("Press ] quickly to enter BIOS")
   term.setCursorPos(2, 5)
@@ -92,8 +92,8 @@ end
 waitForBIOS()
 
 local w, h = term.getSize()
-term.setBackgroundColor(T.bg)
-term.setTextColor(T.text)
+term.setBackgroundColor(BOOT_WHITE)
+term.setTextColor(BOOT_BLACK)
 term.clear()
 
 local function center(y, text, fg)
@@ -101,7 +101,7 @@ local function center(y, text, fg)
   local shown = text:sub(1, w)
   local x = math.max(1, math.floor((w - #shown) / 2) + 1)
   term.setCursorPos(x, math.max(1, y))
-  term.setTextColor(fg or T.text)
+  term.setTextColor(fg or BOOT_BLACK)
   write(shown)
 end
 
@@ -110,19 +110,19 @@ local function progress(y, percent)
   local filled = math.floor(barWidth * percent / 100)
 
   term.setCursorPos(math.max(1, math.floor((w - barWidth) / 2)), y)
-  term.setBackgroundColor(T.panel)
+  term.setBackgroundColor(BOOT_GRAY)
   write(string.rep(" ", barWidth))
   term.setCursorPos(math.max(1, math.floor((w - barWidth) / 2)), y)
-  term.setBackgroundColor(T.dark)
+  term.setBackgroundColor(BOOT_BLUE)
   write(string.rep(" ", filled))
-  term.setBackgroundColor(T.bg)
+  term.setBackgroundColor(BOOT_WHITE)
 end
 
 local centerY = math.max(4, math.floor(h / 2) - 5)
-center(centerY, "PACIFICOS", T.accent)
-center(centerY + 2, "PacificOS 1.8.1", T.text)
-center(centerY + 4, "Complex Computer International (CCI)", T.text)
-center(centerY + 5, "2026", T.muted)
+center(centerY, "PACIFICOS", BOOT_BLUE)
+center(centerY + 2, "PacificOS 1.8.1", BOOT_BLACK)
+center(centerY + 4, "Complex Computer International (CCI)", BOOT_BLACK)
+center(centerY + 5, "2026", BOOT_GRAY)
 
 local steps = {
   "Power-on diagnostics",
@@ -145,7 +145,7 @@ for i, step in ipairs(steps) do
   progress(math.min(h - 4, centerY + 7), percent)
 
   term.setCursorPos(2, math.min(h - 2, centerY + 9))
-  term.setTextColor(T.text)
+  term.setTextColor(BOOT_BLACK)
   write(step:sub(1, math.max(1, w - 12)))
 
   term.setTextColor(BOOT_BLUE)
@@ -156,7 +156,7 @@ for i, step in ipairs(steps) do
 end
 
 progress(math.min(h - 4, centerY + 7), 100)
-term.setTextColor(T.accent)
+term.setTextColor(BOOT_BLUE)
 term.setCursorPos(2, math.min(h - 2, centerY + 9))
 write("SYSTEM READY")
 if animation then os.sleep(math.min(0.15, stepDelay > 0 and stepDelay or 0.15)) end
