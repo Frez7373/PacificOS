@@ -4,7 +4,7 @@ function M.run()
   while true do
     local w,h=term.getSize()
     U.clear(); U.header("About PacificOS")
-    U.label(3,5,"PacificOS 1.6.0",colors.cyan)
+    U.label(3,5,"PacificOS 1.7.4",colors.cyan)
     U.label(3,7,"A modern operating system for CC:Tweaked.")
     U.label(3,9,"Designed and developed by")
     U.label(3,10,"Complex Computer International (CCI)",colors.white)
