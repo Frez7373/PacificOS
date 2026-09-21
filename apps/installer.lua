@@ -196,12 +196,13 @@ function M.run()
       end
     end
 
-    local by = h - 6
+    local by = math.max(8, h - 7)
     local bw = math.max(8, math.floor((w - 3) / 2))
     U.button(2, by, bw, 1, "WGET", U._accent)
     U.button(3 + bw, by, bw, 1, "PASTEBIN", U._accent)
     U.button(2, by + 2, bw, 1, "LAUNCH", U._accent2)
     U.button(3 + bw, by + 2, bw, 1, "DESKTOP", U._accent2)
+    U.backButton(h - 2)
     U.status("Up/Down = select | Enter = launch | Del = uninstall | Q/Esc = back")
 
     local e, a, b, c = os.pullEvent()
@@ -217,6 +218,7 @@ function M.run()
       elseif a == keys.two then installPastebin()
       end
     elseif e == "mouse_click" or e == "monitor_touch" then
+      if U.backHit(b, c, h - 2, 18) then clearTemp(); return end
       local row = c - 4
       if row >= 1 and row <= math.min(#list, rows) then
         selected = row
