@@ -1,7 +1,7 @@
--- PacificOS 1.7.3 installer
+-- PacificOS 1.7.4 installer
 local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
 local ROOT="/pacificos"
-local VERSION="1.7.3"
+local VERSION="1.7.4"
 
 local files={
   "boot.lua","bios.lua","kernel.lua","manifest.lua",
