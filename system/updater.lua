@@ -15,22 +15,21 @@ local function mkdirs(path)
   end
 end
 
+local function removeTree(path)
+  if fs.exists(path) then pcall(fs.delete, path) end
+end
+
 function M.fetch(path)
   if not http then return nil, "HTTP API is disabled." end
   local response, err = http.get(BASE .. path)
   if not response then return nil, tostring(err or "HTTP request failed.") end
 
   local code = 200
-  if type(response.getResponseCode) == "function" then
-    code = response.getResponseCode() or 200
-  end
-
+  if type(response.getResponseCode) == "function" then code = response.getResponseCode() or 200 end
   local body = response.readAll() or ""
   if type(response.close) == "function" then response.close() end
 
-  if code < 200 or code >= 400 then
-    return nil, "HTTP " .. tostring(code)
-  end
+  if code < 200 or code >= 400 then return nil, "HTTP " .. tostring(code) end
   if body == "" then return nil, "Empty response for " .. path end
   return body
 end
@@ -90,10 +89,6 @@ function M.compare()
   }
 end
 
-local function removeTree(path)
-  if fs.exists(path) then pcall(fs.delete, path) end
-end
-
 local function stageFile(path, body)
   local full = STAGE .. "/" .. path
   mkdirs(full)
@@ -105,10 +100,7 @@ local function stageFile(path, body)
 end
 
 local function targetPath(path)
-  if path == "startup.lua" then
-    return "/startup.lua"
-  end
-  return ROOT .. "/" .. path
+  return path == "startup.lua" and "/startup.lua" or ROOT .. "/" .. path
 end
 
 function M.installFile(path, body)
@@ -155,16 +147,16 @@ function M.update(manifest)
     end
   end
 
-  local applied = 0
-  local backups = {}
+  local applied = {}
+  local count = 0
 
   local function rollback()
-    for i = #staged, 1, -1 do
-      local path = staged[i]
+    for i = #applied, 1, -1 do
+      local path = applied[i]
       local target = targetPath(path)
       local backup = BACKUP .. "/" .. path
       if fs.exists(target) then pcall(fs.delete, target) end
-      if backups[path] and fs.exists(backup) then
+      if fs.exists(backup) then
         mkdirs(target)
         pcall(fs.move, backup, target)
       end
@@ -177,33 +169,41 @@ function M.update(manifest)
 
     if fs.exists(target) then
       mkdirs(backup)
-      local ok = pcall(fs.copy, target, backup)
+      local ok, err = pcall(fs.copy, target, backup)
       if not ok then
         rollback()
         removeTree(STAGE)
         removeTree(BACKUP)
-        return false, "Backup failed for " .. path, applied
+        return false, "Backup failed for " .. path .. ": " .. tostring(err), count
       end
-      backups[path] = true
     end
 
-    if fs.exists(target) then fs.delete(target) end
-    mkdirs(target)
+    if fs.exists(target) then
+      local deleted, delErr = pcall(fs.delete, target)
+      if not deleted then
+        rollback()
+        removeTree(STAGE)
+        removeTree(BACKUP)
+        return false, "Cannot replace " .. path .. ": " .. tostring(delErr), count
+      end
+    end
 
+    mkdirs(target)
     local ok, err = pcall(fs.move, STAGE .. "/" .. path, target)
     if not ok then
       rollback()
       removeTree(STAGE)
       removeTree(BACKUP)
-      return false, "Install failed for " .. path .. ": " .. tostring(err), applied
+      return false, "Install failed for " .. path .. ": " .. tostring(err), count
     end
 
-    applied = applied + 1
+    applied[#applied + 1] = path
+    count = count + 1
   end
 
   removeTree(STAGE)
   removeTree(BACKUP)
-  return true, nil, applied
+  return true, nil, count
 end
 
 return M
