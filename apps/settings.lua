@@ -53,8 +53,11 @@ function M.run()
       U.label(x,top+2,'Animations: '..(C.get('animations') and 'On' or 'Off'))
       U.label(x,top+4,'Sounds: '..(C.get('sounds') and 'On' or 'Off'))
       U.label(x,top+6,'Seconds: '..(C.get('show_seconds') and 'On' or 'Off'))
-      safeButton(x,top+8,buttonW,'Toggle Animations',true)
-      safeButton(x,top+11,buttonW,'Toggle Sounds',true)
+      local actionY=top+8
+      local actionGap=1
+      local actionW=math.max(8,math.floor((w-4-actionGap)/2))
+      safeButton(x,actionY,actionW,'Toggle Animations',true)
+      safeButton(x+actionW+actionGap,actionY,actionW,'Toggle Sounds',true)
     elseif section==3 then
       U.label(x,top,'Network: '..(C.get('network') and 'Enabled' or 'Disabled'))
       U.label(x,top+2,'Modems detected automatically.')
@@ -108,10 +111,14 @@ function M.run()
         if s and s~='' then C.set('hostname',s) end
       elseif section==1 and y>=top+7 and y<top+9 and x0>=x and x0<x+buttonW then
         C.set('default_app','Files')
-      elseif section==2 and y>=top+8 and y<top+10 and x0>=x and x0<x+buttonW then
-        toggle('animations')
-      elseif section==2 and y>=top+11 and y<top+13 and x0>=x and x0<x+buttonW then
-        toggle('sounds')
+      elseif section==2 and y>=top+8 and y<top+10 then
+        local actionGap=1
+        local actionW=math.max(8,math.floor((w-4-actionGap)/2))
+        if x0>=x and x0<x+actionW then
+          toggle('animations')
+        elseif x0>=x+actionW+actionGap and x0<x+actionW+actionGap+actionW then
+          toggle('sounds')
+        end
       elseif section==3 and y>=top+4 and y<top+6 and x0>=x and x0<x+buttonW then
         toggle('network')
       elseif section==4 and y>=top+4 and y<top+6 and x0>=x and x0<x+buttonW then
