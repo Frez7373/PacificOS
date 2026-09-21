@@ -1,91 +1,102 @@
--- PacificOS 1.7.4 installer
-local BASE="https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
-local ROOT="/pacificos"
-local VERSION="1.7.4"
+-- PacificOS 1.8.0 installer
+local BASE = "https://raw.githubusercontent.com/Frez7373/PacificOS/main/"
+local ROOT = "/pacificos"
+local STAGE = ROOT .. "/.installer_stage"
+local BACKUP = ROOT .. "/.installer_backup"
+local VERSION = "1.8.0"
 
-local files={
-  "boot.lua","bios.lua","kernel.lua","manifest.lua",
-  "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua","system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
+local files = {
+  "startup.lua","boot.lua","bios.lua","kernel.lua","manifest.lua",
+  "system/module.lua","system/config.lua","system/filesystem.lua","system/devices.lua",
+  "system/network.lua","system/security.lua","system/updater.lua","system/apps.lua",
   "ui/theme.lua","ui/widgets.lua","ui/windows.lua",
-  "apps/settings.lua","apps/files.lua","apps/editor.lua","apps/task_manager.lua","apps/terminal.lua","apps/network.lua","apps/devices.lua","apps/updater.lua","apps/antivirus.lua","apps/calculator2.lua","apps/clock.lua","apps/calendar.lua","apps/system_info.lua","apps/system_monitor.lua","apps/stopwatch.lua","apps/converter.lua","apps/about.lua","apps/installer.lua",
+  "apps/about.lua","apps/antivirus.lua","apps/calculator.lua","apps/calculator2.lua",
+  "apps/calendar.lua","apps/clock.lua","apps/converter.lua","apps/devices.lua",
+  "apps/editor.lua","apps/files.lua","apps/installer.lua","apps/network.lua",
+  "apps/settings.lua","apps/stopwatch.lua","apps/system_info.lua",
+  "apps/system_monitor.lua","apps/task_manager.lua","apps/terminal.lua","apps/updater.lua",
   "recovery/recovery.lua","recovery/factory_reset.lua"
 }
 
-local function mkdirs(path)
-  local dir=fs.getDir(path)
-  if dir=="" then return end
-  local cur=""
-  for part in string.gmatch(dir,"[^/]+") do
-    cur=cur=="" and part or cur.."/"..part
-    if not fs.exists("/"..cur) then
-      fs.makeDir("/"..cur)
-    end
+local function clearPath(path)
+  if fs.exists(path) then pcall(fs.delete, path) end
+end
+
+local function ensureDir(path)
+  local dir = fs.getDir(path)
+  if dir == "" then return end
+
+  local current = ""
+  for part in string.gmatch(dir, "[^/]+") do
+    current = current == "" and part or current .. "/" .. part
+    local full = "/" .. current
+    if not fs.exists(full) then fs.makeDir(full) end
   end
 end
 
-local function get(path)
-  if not http then
-    return nil,"HTTP API is disabled in CC:Tweaked."
+local function targetPath(path)
+  if path == "startup.lua" then return "/startup.lua" end
+  return ROOT .. "/" .. path
+end
+
+local function stagePath(path)
+  return STAGE .. "/" .. path
+end
+
+local function fetch(path)
+  if not http then return nil, "HTTP API is disabled." end
+
+  local response, err = http.get(BASE .. path)
+  if not response then return nil, tostring(err or "HTTP request failed.") end
+
+  local code = 200
+  if type(response.getResponseCode) == "function" then
+    code = response.getResponseCode() or 200
   end
 
-  local url=BASE..path
-  local response,err=http.get(url)
+  local body = response.readAll() or ""
+  if type(response.close) == "function" then response.close() end
 
-  if not response then
-    return nil,tostring(err or "HTTP request failed")
+  if code < 200 or code >= 400 then
+    return nil, "HTTP " .. tostring(code)
   end
-
-  local code=200
-  if type(response.getResponseCode)=="function" then
-    code=response.getResponseCode() or 200
-  end
-
-  if code<200 or code>=400 then
-    local body=""
-    if type(response.readAll)=="function" then
-      body=response.readAll() or ""
-    end
-    if type(response.close)=="function" then response.close() end
-    return nil,"HTTP "..tostring(code).." for "..url
-  end
-
-  local body=response.readAll() or ""
-  response.close()
-
-  if body=="" then
-    return nil,"Empty response from "..url
+  if body == "" then
+    return nil, "Empty response."
   end
 
   return body
 end
 
-local function writeFile(path,body)
-  local full=ROOT.."/"..path
-  if path=="startup.lua" then
-    full="/startup.lua"
-  end
-
-  mkdirs(full)
-
-  local h=fs.open(full,"w")
-  if not h then
-    return false,"Cannot write "..full
-  end
-
-  h.write(body)
-  h.close()
+local function write(path, body)
+  ensureDir(path)
+  local handle, err = fs.open(path, "w")
+  if not handle then return false, tostring(err or "Cannot open file.") end
+  handle.write(body)
+  handle.close()
   return true
 end
 
-term.setBackgroundColor(colors.black)
-term.setTextColor(colors.white)
-term.clear()
-term.setCursorPos(1,1)
+local function rollback(applied)
+  for i = #applied, 1, -1 do
+    local path = applied[i]
+    local target = targetPath(path)
+    local backup = BACKUP .. "/" .. path
 
-print("PACIFICOS "..VERSION.." INSTALLER")
+    if fs.exists(target) then clearPath(target) end
+    if fs.exists(backup) then
+      ensureDir(target)
+      pcall(fs.move, backup, target)
+    end
+  end
+end
+
+term.setBackgroundColor(colors.white)
+term.setTextColor(colors.black)
+term.clear()
+term.setCursorPos(1, 1)
+
+print("PACIFICOS " .. VERSION .. " INSTALLER")
 print("Complex Computer International (CCI) - 2026")
-print("")
-print("Direct GitHub Raw download mode")
 print("")
 
 if not http then
@@ -95,79 +106,90 @@ if not http then
 end
 
 if fs.exists(ROOT) and not fs.isDir(ROOT) then
-  print("ERROR: "..ROOT.." exists but is not a directory.")
-  print("Remove that file and run the installer again.")
+  print("ERROR: " .. ROOT .. " exists as a file.")
   return
 end
 
-if not fs.exists(ROOT) then
-  fs.makeDir(ROOT)
-end
+if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 
-for i,path in ipairs(files) do
-  write(string.format("[%02d/%02d] %-36s ",i,#files,path))
+clearPath(STAGE)
+clearPath(BACKUP)
+fs.makeDir(STAGE)
+fs.makeDir(BACKUP)
 
-  local body,err=get(path)
+print("Downloading and staging " .. #files .. " files...")
+
+for i, path in ipairs(files) do
+  write(string.format("[%02d/%02d] %-34s ", i, #files, path))
+  local body, err = fetch(path)
   if not body then
     print("FAILED")
-    print("Download error:")
     print(tostring(err))
-    print("")
-    print("URL:")
-    print(BASE..path)
-    print("")
-    print("Installation stopped safely.")
-    print("Nothing was rebooted.")
+    clearPath(STAGE)
+    clearPath(BACKUP)
     return
   end
 
-  local ok,werr=writeFile(path,body)
+  local ok, writeErr = write(stagePath(path), body)
   if not ok then
     print("FAILED")
-    print(tostring(werr))
+    print(tostring(writeErr))
+    clearPath(STAGE)
+    clearPath(BACKUP)
     return
   end
-
   print("OK")
 end
 
-local startup=[[
-local ok,err=pcall(dofile,"/pacificos/boot.lua")
-if not ok then
-  term.clear()
-  term.setCursorPos(1,1)
-  print("PACIFICOS RECOVERY")
-  print("")
-  print("Startup failed:")
-  print(tostring(err))
-  print("")
-  print("[R] Recovery   [Q] Shutdown")
-  while true do
-    local e,k=os.pullEvent()
-    if e=="key" and k==keys.r then
-      dofile("/pacificos/recovery/recovery.lua")
-      return
-    elseif e=="key" and k==keys.q then
-      os.shutdown()
+print("")
+print("Creating rollback backup...")
+
+for _, path in ipairs(files) do
+  local target = targetPath(path)
+  if fs.exists(target) and not fs.isDir(target) then
+    local backup = BACKUP .. "/" .. path
+    ensureDir(backup)
+    local ok, err = pcall(fs.copy, target, backup)
+    if not ok then
+      print("Backup failed for " .. path .. ": " .. tostring(err))
+      clearPath(STAGE)
+      clearPath(BACKUP)
       return
     end
   end
 end
-]]
 
-local ok,err=writeFile("startup.lua",startup)
-if not ok then
-  print("FAILED")
-  print(tostring(err))
-  return
+local applied = {}
+for _, path in ipairs(files) do
+  local target = targetPath(path)
+  local staged = stagePath(path)
+
+  if fs.exists(target) then clearPath(target) end
+  ensureDir(target)
+
+  local ok, err = pcall(fs.move, staged, target)
+  if not ok then
+    print("")
+    print("INSTALL FAILED: " .. path)
+    print(tostring(err))
+    print("Rolling back...")
+    rollback(applied)
+    clearPath(STAGE)
+    clearPath(BACKUP)
+    print("Rollback complete.")
+    return
+  end
+
+  applied[#applied + 1] = path
 end
 
+clearPath(STAGE)
+clearPath(BACKUP)
+
 print("")
-print("All "..#files.." PacificOS files downloaded.")
-print("Installer: OK")
-print("BIOS: included")
-print("Desktop navigation: included")
-print("PacificOS "..VERSION.." installed successfully.")
+print("PacificOS " .. VERSION .. " installed successfully.")
+print("System files updated safely with rollback support.")
+print("Third-party apps and config are preserved.")
 print("Rebooting...")
 os.sleep(1)
 os.reboot()
