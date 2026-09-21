@@ -90,8 +90,7 @@ local basic = {
   {"4","4"},{"5","5"},{"6","6"},{"÷","/"},
   {"1","1"},{"2","2"},{"3","3"},{"×","*"},
   {"0","0"},{".","."},{"-","-"},{"+","+"},
-  {"(","("},{")",")"},{"^","^"},{"=","="},
-  {"pi","pi"},{"ANS","ans"},{"CLEAR","CLEAR"},{"SPACE"," "}
+  {"(","("},{")",")"},{"^","^"},{"=","="}
 }
 
 local scientific = {
@@ -118,7 +117,7 @@ local function press(item, state)
     else
       state.error = err
     end
-  elseif action ~= " " then
+  else
     state.expr = state.expr .. action
     state.error = nil
   end
@@ -133,8 +132,11 @@ function M.run()
 
     U.clear()
     U.header("Calculator", true)
-    U.button(2, 3, 12, 1, state.mode == "Basic" and "BASIC" or "SCIENTIFIC", U._accent)
-    U.label(16, 3, "ANS = last result", U._muted, math.max(1, w - 15))
+
+    local toggleWidth = math.min(14, w - 2)
+    U.button(2, 3, toggleWidth, 1,
+      state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
+    U.label(toggleWidth + 4, 3, "ANS = last result", U._muted, math.max(1, w - toggleWidth - 4))
 
     U.label(2, 5, "Expression", U._muted)
     U.fill(2, 6, math.max(1, w - 3), 1, U._accent, U._textOnBlue)
@@ -151,44 +153,36 @@ function M.run()
     local gap = 1
     local bw = math.max(7, math.floor((w - 2 - (cols - 1) * gap) / cols))
     local startY = 9
-    local rows = math.ceil(#items / cols)
 
     for i, item in ipairs(items) do
       local col = (i - 1) % cols
       local row = math.floor((i - 1) / cols)
       local x = 2 + col * (bw + gap)
-      local y = startY + row * 2
-      if y < h - 4 then
-        local bg = (item[2] == "CLEAR" and colors.red)
-          or (item[2] == "=" and U._accent)
-          or U._accent2
-        local fg = (item[2] == "CLEAR" or item[2] == "=") and colors.white or U._text
-        U.button(x, y, bw, 1, item[1], bg, fg)
+      local y = startY + row
+      local bg = item[2] == "=" and U._accent or U._accent2
+      if y <= 13 then
+        U.button(x, y, bw, 1, item[1], bg, item[2] == "=" and colors.white or U._text)
       end
     end
 
-    local switchY = h - 3
-    local switchW = math.min(14, w - 2)
-    local backX = math.min(w - 1, 18)
-    if switchY > 7 then
-      U.button(2, switchY, switchW, 1,
+    local recentY = 15
+    if #state.history > 0 then
+      U.label(2, recentY, "Last: " .. state.history[#state.history], U._muted, math.max(1, w - 3))
+    end
+
+    local switchY = 17
+    if h >= 19 then
+      U.button(2, switchY, toggleWidth, 1,
         state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
       if w >= 24 then
-        U.button(backX, switchY, math.min(14, w - backX + 1), 1, "BACK", U._accent2)
+        local backWidth = math.min(14, w - 18)
+        U.button(18, switchY, backWidth, 1, "BACK", U._accent2)
       end
-    end
-
-    local historyY = h - 6
-    if historyY > 8 then
-      U.label(2, historyY, "Recent", U._muted)
-      local hy = historyY + 1
-      local count = 0
-      for i = #state.history, 1, -1 do
-        if hy >= switchY then break end
-        U.label(3, hy, state.history[i], U._muted, math.max(1, w - 4))
-        hy, count = hy + 1, count + 1
-        if count >= 2 then break end
-      end
+    else
+      switchY = h - 2
+      U.button(2, switchY, toggleWidth, 1,
+        state.mode == "Basic" and "SCIENTIFIC" or "BASIC", U._accent)
+      if w >= 24 then U.button(18, switchY, math.min(14, w - 18), 1, "BACK", U._accent2) end
     end
 
     U.status("Keyboard + touch | Enter = result | Backspace = delete | Q/Esc = back")
@@ -207,17 +201,17 @@ function M.run()
       state.expr = state.expr .. a
       state.error = nil
     elseif e == "mouse_click" or e == "monitor_touch" then
-      if U.hit(2, 3, switchW, 1, b, c) then
+      if U.hit(2, 3, toggleWidth, 1, b, c) or U.hit(2, switchY, toggleWidth, 1, b, c) then
         state.mode = state.mode == "Basic" and "Scientific" or "Basic"
-      elseif w >= 24 and U.hit(backX, switchY, math.min(14, w - backX + 1), 1, b, c) then
+      elseif w >= 24 and U.hit(18, switchY, math.min(14, w - 18), 1, b, c) then
         return
       else
         for i, item in ipairs(items) do
           local col = (i - 1) % cols
           local row = math.floor((i - 1) / cols)
           local x = 2 + col * (bw + gap)
-          local y = startY + row * 2
-          if y < h - 4 and U.hit(x, y, bw, 1, b, c) then
+          local y = startY + row
+          if y <= 13 and U.hit(x, y, bw, 1, b, c) then
             press(item, state)
             break
           end
