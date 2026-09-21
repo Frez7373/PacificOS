@@ -33,9 +33,11 @@ function M.run()
     U.label(2, 8, "Memory: " .. string.format("%.1f KB", collectgarbage("count")))
     U.label(2, 9, "Uptime: " .. string.format("%.1f s", os.clock()))
 
-    U.label(2, 11, "Apps run in guarded sessions; crashes return", U._muted)
-    U.label(2, 12, "to the desktop. Lua code is not sandboxed.", U._muted)
-    U.label(2, 13, "No OS-level process or memory isolation.", U._muted)
+    if h >= 16 then
+      U.label(2, 11, "Apps run in guarded sessions; crashes return", U._muted)
+      U.label(2, 12, "to the desktop. Lua code is not sandboxed.", U._muted)
+      U.label(2, 13, "No OS-level process or memory isolation.", U._muted)
+    end
 
     U.backButton(h - 2)
     U.status("Live refresh | Q/Esc/Backspace = back")
