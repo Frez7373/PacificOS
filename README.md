@@ -1,6 +1,6 @@
 # PacificOS
 
-**PacificOS 1.8.0** is a modern, touch-friendly desktop operating system for CC:Tweaked.
+**PacificOS 1.9.0** is a modern, touch-friendly desktop operating system for CC:Tweaked.
 
 ## Install
 
@@ -18,7 +18,7 @@ The bootstrap installer downloads the current stable system into `/pacificos`, u
 - Responsive layout for different terminal sizes
 - Mouse and monitor touch support
 - Keyboard navigation
-- Stable desktop pagination with Previous/Next/Power controls
+- Stable desktop pagination with Home/Previous/Next/Power controls
 - BIOS entry with the `]` key during startup
 - Recovery environment and Safe Mode
 - Boot animation controlled from Settings
