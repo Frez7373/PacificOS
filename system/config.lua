@@ -1,6 +1,6 @@
 local path='/pacificos/config.cfg'
 local function defaults()
- return {version='1.5.0',theme='ocean',hostname='pacificos',autostart=true,network=true,animations=true,sounds=true,notifications=true,show_seconds=false,boot_delay=0.3,default_app='Files'}
+ return {version='1.7.0',theme='ocean',hostname='pacificos',autostart=true,network=true,animations=true,sounds=true,notifications=true,show_seconds=false,boot_delay=0.3,default_app='Files'}
 end
 local data=defaults()
 local M={}
