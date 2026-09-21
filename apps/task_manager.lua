@@ -1,3 +1,54 @@
-local U=dofile('/pacificos/ui/widgets.lua'); local M={}
-function M.run() while true do U.header('Task Manager'); term.setCursorPos(2,3); print('PacificOS uses cooperative application sessions.'); term.setCursorPos(2,5); print('This keeps failed apps isolated with pcall.'); term.setCursorPos(2,7); print('Memory: '..tostring(collectgarbage('count'))..' KB'); U.status('Q close'); local e,a=os.pullEvent(); if e=='key' and a==keys.q then return end end end
+local U = dofile("/pacificos/ui/widgets.lua")
+local M = {}
+
+local function runningProgram()
+  if shell and shell.getRunningProgram then
+    local ok, value = pcall(shell.getRunningProgram)
+    if ok then return value or "PacificOS kernel" end
+  end
+  return "PacificOS kernel"
+end
+
+local function taskCount()
+  if multishell and multishell.getCount then
+    local ok, value = pcall(multishell.getCount)
+    if ok and value then return value end
+  end
+  return 1
+end
+
+function M.run()
+  local timer = os.startTimer(0.5)
+
+  while true do
+    local w, h = term.getSize()
+    local program = runningProgram()
+    local tasks = taskCount()
+
+    U.clear()
+    U.header("Task Manager", true)
+    U.label(2, 4, "Session status", U._accent)
+    U.label(2, 6, "Running program: " .. tostring(program))
+    U.label(2, 7, "Task sessions: " .. tostring(tasks))
+    U.label(2, 8, "Memory: " .. string.format("%.1f KB", collectgarbage("count")))
+    U.label(2, 9, "Uptime: " .. string.format("%.1f s", os.clock()))
+
+    U.label(2, 11, "PacificOS uses isolated application sessions.", U._muted)
+    U.label(2, 12, "Crashed apps return to the desktop instead of", U._muted)
+    U.label(2, 13, "bringing down the whole kernel.", U._muted)
+
+    U.backButton(h - 2)
+    U.status("Live refresh | Q/Esc/Backspace = back")
+
+    local e, a, b, c = os.pullEvent()
+    if e == "timer" and a == timer then
+      timer = os.startTimer(0.5)
+    elseif U.closeEvent(e, a) then
+      return
+    elseif (e == "mouse_click" or e == "monitor_touch") and U.backHit(b, c, h - 2, 18) then
+      return
+    end
+  end
+end
+
 return M
