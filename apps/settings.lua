@@ -138,10 +138,11 @@ function M.run()
     end
 
     local actionY = 9
+    local actionWidth = math.max(7, math.min(28, w - 12))
     for i, name in ipairs(actions) do
       local y = actionY + i - 1
       if y < h then
-        U.button(2, y, math.min(30, w - 3), 1, name,
+        U.button(2, y, actionWidth, 1, name,
           i == selected and U._accent or U._accent2,
           i == selected and U._textOnBlue or U._text)
       end
